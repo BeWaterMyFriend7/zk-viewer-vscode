@@ -1,0 +1,16 @@
+.vscode/**
+.vscode-test/**
+out/test/**
+src/**
+test/**
+scripts/**
+docs/**
+.code/**
+.github/**
+coverage/**
+dist/**
+**/*.map
+*.vsix
+.inttest*.log
+.stale-dist-file
+.tmp-ext-install/**

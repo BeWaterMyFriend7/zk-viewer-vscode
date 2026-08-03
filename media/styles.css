@@ -1,0 +1,40 @@
+body {
+  font-family: var(--vscode-font-family);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+  padding: 0 16px;
+}
+
+#stat {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  margin: 8px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 4px;
+}
+
+#data {
+  width: 100%;
+  min-height: 320px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: var(--vscode-editor-font-size);
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  box-sizing: border-box;
+  padding: 8px;
+  white-space: pre;
+}
+
+.toolbar {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#status {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+}

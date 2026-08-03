@@ -1,0 +1,10 @@
+node_modules/
+out/
+dist/
+*.vsix
+.vscode-test/
+.inttest*.log
+.stale-dist-file
+.tmp-ext-install/
+*.log
+coverage/

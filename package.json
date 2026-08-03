@@ -1,0 +1,261 @@
+{
+  "name": "zk-viewer-vscode",
+  "displayName": "ZooKeeper Viewer",
+  "description": "Lightweight visual ZooKeeper client for VS Code: browse, search, edit, add and delete nodes with JSON support.",
+  "version": "0.1.0",
+  "publisher": "zk-viewer",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BeWaterMyFriend7/zk-viewer-vscode.git"
+  },
+  "main": "./out/src/extension.js",
+  "activationEvents": [
+    "onView:zkViewer.tree",
+    "onCommand:zkViewer.connect",
+    "onCommand:zkViewer.disconnect",
+    "onCommand:zkViewer.addConnection",
+    "onCommand:zkViewer.editConnection",
+    "onCommand:zkViewer.removeConnection",
+    "onCommand:zkViewer.refresh",
+    "onCommand:zkViewer.search",
+    "onCommand:zkViewer.gotoPath",
+    "onCommand:zkViewer.addNode",
+    "onCommand:zkViewer.editNode",
+    "onCommand:zkViewer.deleteNode",
+    "onCommand:zkViewer.copyPath",
+    "onCommand:zkViewer.openNodeDetail"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "zkViewer",
+          "title": "ZooKeeper",
+          "icon": "media/zk.svg"
+        }
+      ]
+    },
+    "views": {
+      "zkViewer": [
+        {
+          "id": "zkViewer.tree",
+          "name": "ZooKeeper Nodes",
+          "icon": "media/zk.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "zkViewer.connect",
+        "title": "Connect",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.disconnect",
+        "title": "Disconnect",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.addConnection",
+        "title": "Add Connection...",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.editConnection",
+        "title": "Edit Connection...",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.removeConnection",
+        "title": "Remove Connection...",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.refresh",
+        "title": "Refresh",
+        "category": "ZooKeeper",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "zkViewer.search",
+        "title": "Search Nodes...",
+        "category": "ZooKeeper",
+        "icon": "$(search)"
+      },
+      {
+        "command": "zkViewer.gotoPath",
+        "title": "Go to Path...",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.addNode",
+        "title": "Add Node...",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.editNode",
+        "title": "Edit Node Data",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.deleteNode",
+        "title": "Delete Node",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.copyPath",
+        "title": "Copy Path",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.openNodeDetail",
+        "title": "Open Details",
+        "category": "ZooKeeper"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "zkViewer.connect",
+          "when": "view == zkViewer.tree && zkViewer:connected == false",
+          "group": "navigation"
+        },
+        {
+          "command": "zkViewer.disconnect",
+          "when": "view == zkViewer.tree && zkViewer:connected == true",
+          "group": "navigation"
+        },
+        {
+          "command": "zkViewer.search",
+          "when": "view == zkViewer.tree && zkViewer:connected == true",
+          "group": "navigation"
+        },
+        {
+          "command": "zkViewer.refresh",
+          "when": "view == zkViewer.tree && zkViewer:connected == true",
+          "group": "navigation"
+        },
+        {
+          "command": "zkViewer.addConnection",
+          "when": "view == zkViewer.tree",
+          "group": "zoo"
+        },
+        {
+          "command": "zkViewer.editConnection",
+          "when": "view == zkViewer.tree",
+          "group": "zoo"
+        },
+        {
+          "command": "zkViewer.removeConnection",
+          "when": "view == zkViewer.tree",
+          "group": "zoo"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "zkViewer.openNodeDetail",
+          "when": "view == zkViewer.tree && viewItem == znode",
+          "group": "inline@1"
+        },
+        {
+          "command": "zkViewer.addNode",
+          "when": "view == zkViewer.tree && viewItem == znode",
+          "group": "zoo@1"
+        },
+        {
+          "command": "zkViewer.editNode",
+          "when": "view == zkViewer.tree && viewItem == znode",
+          "group": "zoo@2"
+        },
+        {
+          "command": "zkViewer.deleteNode",
+          "when": "view == zkViewer.tree && viewItem == znode",
+          "group": "zoo@3"
+        },
+        {
+          "command": "zkViewer.copyPath",
+          "when": "view == zkViewer.tree && viewItem == znode",
+          "group": "zoo@4"
+        },
+        {
+          "command": "zkViewer.refresh",
+          "when": "view == zkViewer.tree && viewItem == znode",
+          "group": "zoo@5"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ZooKeeper Viewer",
+      "properties": {
+        "zkViewer.sessionTimeout": {
+          "type": "number",
+          "default": 10000,
+          "description": "ZooKeeper session timeout in milliseconds."
+        },
+        "zkViewer.maxReconnectAttempts": {
+          "type": "number",
+          "default": 3,
+          "description": "Maximum automatic reconnect attempts before giving up."
+        },
+        "zkViewer.reconnectDelayMs": {
+          "type": "number",
+          "default": 2000,
+          "description": "Delay between reconnect attempts in milliseconds."
+        },
+        "zkViewer.maxSearchNodes": {
+          "type": "number",
+          "default": 2000,
+          "description": "Maximum nodes visited during a single search."
+        },
+        "zkViewer.maxNodeDataBytes": {
+          "type": "number",
+          "default": 1048576,
+          "description": "Maximum node data size loaded into the detail panel in bytes."
+        },
+        "zkViewer.dev.useMockClient": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Development/testing only: use the in-memory mock ZooKeeper client instead of a real connection."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "test:unit": "npm run compile && mocha \"out/test/unit/**/*.test.js\"",
+    "test:unit:cov": "npm run compile && c8 mocha \"out/test/unit/**/*.test.js\"",
+    "test:perf": "npm run compile && mocha \"out/test/perf/**/*.test.js\" --timeout 30000",
+    "test:integration": "npm run compile && node scripts/run-integration-tests.js",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package --out dist/zk-viewer-vscode.vsix"
+  },
+  "dependencies": {
+    "node-zookeeper-client": "^1.1.3"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.0.0",
+    "@types/node-zookeeper-client": "^1.1.0",
+    "@types/vscode": "1.60.0",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.1",
+    "c8": "^10.0.0",
+    "eslint": "^9.0.0",
+    "mocha": "^10.8.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}
