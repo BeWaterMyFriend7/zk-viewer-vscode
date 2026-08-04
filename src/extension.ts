@@ -303,8 +303,8 @@ async function gotoPathCommand(targetPath?: string): Promise<void> {
 }
 
 const SEARCH_MODES = [
-  { label: 'Exact path (e.g. /app/config)', mode: 'exact' as const },
   { label: 'Name prefix', mode: 'prefix' as const },
+  { label: 'Exact path (e.g. /app/config)', mode: 'exact' as const },
   { label: 'Path wildcard (e.g. /app/*/config)', mode: 'wildcard' as const },
   { label: 'Path regex (e.g. ^/svc-\\d+$)', mode: 'regex' as const },
   { label: 'Content', mode: 'content' as const },
