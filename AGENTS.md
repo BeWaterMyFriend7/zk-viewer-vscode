@@ -1,48 +1,69 @@
-# Repository Guidelines
+# 仓库指南
 
-## Project Overview
+## 项目概述
 
-zk-viewer-vscode is a Visual Studio Code extension that provides a lightweight visual client for Apache ZooKeeper. It is licensed under Apache 2.0, and `main` is the stable branch.
+zk-viewer-vscode 是一个 VS Code 扩展，为 Apache ZooKeeper 提供轻量级可视化客户端。项目采用 Apache 2.0 许可证，`main` 为稳定分支。
 
-## Project Structure & Module Organization
+## 项目结构与模块组织
 
-The extension follows the standard VS Code extension layout:
+扩展遵循标准 VS Code 扩展布局：
 
-- `src/` — TypeScript source: activation entry point, command handlers, tree views, and the ZooKeeper client wrapper
-- `media/` — webview assets (styles and scripts) for panel views
-- `test/` — integration tests that run inside the Extension Development Host
-- `docs/` — `REQUIREMENTS.md` (requirements) and `design.md` (architecture & design decisions)
-- `package.json` — extension manifest: contributions, activation events, commands, and configuration
-- `.vscode/` — shared launch and task configuration for debugging
+- `src/` — TypeScript 源码：激活入口、命令处理、树视图与 ZooKeeper 客户端封装
+- `media/` — Webview 静态资源（样式与脚本）
+- `test/` — 在扩展开发宿主（Extension Development Host）中运行的集成测试
+- `docs/` — `REQUIREMENTS.md`（需求文档）与 `design.md`（架构与设计决策）
+- `package.json` — 扩展清单：贡献点、激活事件、命令与配置
+- `.vscode/` — 共享的调试启动与任务配置
 
-Keep logic in small, single-purpose modules under `src/` (e.g., `src/tree/`, `src/commands/`); avoid large files.
+逻辑应放在 `src/` 下职责单一的小模块中（如 `src/tree/`、`src/commands/`），避免文件过大。
 
-## Build, Test, and Development Commands
+## 构建、测试与开发命令
 
-- `npm install` — install dependencies
-- `npm run compile` — type-check and compile TypeScript
-- `npm test` — run integration tests in the Extension Development Host (via `@vscode/test-electron`)
-- `npm run test:perf` — run lazy-loading performance assertions (500-child level under 500ms)
-- `npm run test:unit:cov` — run unit tests with c8 coverage reporting
-- `npm run lint` — run ESLint
-- Press `F5` in VS Code — launch the Extension Development Host for manual testing
-- `vsce package` — build the installable `.vsix` bundle
+- `npm install` — 安装依赖
+- `npm run compile` — 类型检查并编译 TypeScript
+- `npm test` — 在扩展开发宿主中运行集成测试（通过 `@vscode/test-electron`）
+- `npm run test:perf` — 运行懒加载性能断言（500 个子节点层级耗时低于 500ms）
+- `npm run test:unit:cov` — 运行单元测试并输出 c8 覆盖率报告
+- `npm run lint` — 运行 ESLint
+- 在 VS Code 中按 `F5` — 启动扩展开发宿主进行手动测试
+- `vsce package` — 打包可安装的 `.vsix` 文件
 
-## Coding Style & Naming Conventions
+## 编码风格与命名约定
 
-- TypeScript with 2-space indentation, semicolons, and single quotes
-- `camelCase` for variables and functions, `PascalCase` for classes and types, `kebab-case` for file names
-- VS Code commands use the `zkViewer.` prefix, e.g., `zkViewer.refresh`
-- Run ESLint and Prettier before committing
+- TypeScript：2 空格缩进、分号、单引号
+- 变量与函数使用 `camelCase`，类与类型使用 `PascalCase`，文件名使用 `kebab-case`
+- VS Code 命令使用 `zkViewer.` 前缀，如 `zkViewer.refresh`
+- 提交前需通过 ESLint 与 Prettier 检查
 
-## Testing Guidelines
+## 测试规范
 
-- Integration tests use Mocha through `@vscode/test-electron`
-- Group by feature with `describe`, and name cases with `it` describing the expected behavior
-- Cover command handlers and tree-view behavior; keep tests independent of live ZooKeeper clusters by mocking the client
+- 集成测试使用 Mocha + `@vscode/test-electron`
+- 按功能使用 `describe` 分组，`it` 用例名描述预期行为
+- 覆盖命令处理器与树视图行为；通过 Mock 客户端保持测试与真实 ZooKeeper 集群无关
 
-## Commit & Pull Request Guidelines
+## 提交与 Pull Request 规范
 
-- Use Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
-- One logical change per commit; reference issue numbers in the commit body
-- Pull requests must link the related issue, summarize the change and its impact, include screenshots for UI changes, and pass `npm test` and `npm run lint`
+### Commit 信息
+
+所有 Commit 信息必须使用**中文**总结：
+
+- 首行为一句话中文总结，描述本次改动做了什么（如「优化搜索逻辑」）
+- 如有多个修改点，空一行后以列表逐条列出；改动较小（如单文件小修复）可以只写总结，不必列出明细
+
+示例：
+
+```text
+优化搜索逻辑
+- 优化图标
+- 修复搜索展示逻辑
+- 调整文档
+```
+
+- 一次提交只包含一个逻辑变更
+- 相关 Issue 编号写入提交正文
+
+### Pull Request
+
+- 关联相关 Issue，说明变更内容与影响
+- UI 变更需附截图
+- 合并前必须通过 `npm test` 与 `npm run lint`
