@@ -596,6 +596,7 @@ export function getTestApi(): {
   treeProvider: NodeTreeProvider;
   treeView: vscode.TreeView<ZkNode>;
   detailController: () => ReturnType<typeof NodeDetailPanel.getController>;
+  detailPanelHtml: () => string | undefined;
   lastRevealedPath: () => string | undefined;
   lastCommandError: () => string | undefined;
   getActiveConnection: () => ConnectionConfig | undefined;
@@ -607,6 +608,7 @@ export function getTestApi(): {
     treeProvider,
     treeView,
     detailController: () => NodeDetailPanel.getController(),
+    detailPanelHtml: () => NodeDetailPanel.getCurrentHtml(),
     lastRevealedPath: () => lastRevealedPath,
     lastCommandError: () => lastCommandError,
     getActiveConnection: () => activeConnection,

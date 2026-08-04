@@ -82,6 +82,8 @@ test/unit|perf|integration/
 - `listChildDescriptors`：仅请求当前层级的 `getChildren` + 逐个 `getStat` 识别类型，满足懒加载；
 - `node-model`：由 `ephemeralOwner` 与顺序命名（`-\d{10}$`）推导四种节点类型，映射 Codicon。
 
+**活动栏图标规范：** SVG 必须为单色（`currentColor`）、无背景色块、无渐变，由 VS Code 主题着色，否则在新版 VS Code（尤其 Windows）中不渲染。
+
 ### 3.3 查询搜索（search/）
 
 - `path-resolver`：路径规范化（去重复斜杠 / 末尾斜杠）与存在性校验；
@@ -91,7 +93,7 @@ test/unit|perf|integration/
 
 - `json-utils`：数据分类（JSON / 文本 / 二进制含 `\0`），JSON 二空格格式化，二进制十六进制视图；
 - `DetailPanelController`：vscode 无关的消息协议，`loadData → save → saved/error`，保存携带 `stat.version` 乐观锁，`BadVersion` 冲突不覆盖并返回错误；
-- `NodeDetailPanel`：Webview 面板（CSP nonce + localResourceRoots），与控制器桥接。
+- `NodeDetailPanel`：Webview 面板（CSP nonce + localResourceRoots），与控制器桥接；**默认只读**，必须点击「Edit」按钮才进入编辑模式（防误触），二进制数据始终只读。
 
 ### 3.5 节点操作（commands/）
 
@@ -119,6 +121,7 @@ test/unit|perf|integration/
 | D6 懒加载分页 | 展开时才请求子节点 | 满足 500+ 子节点性能要求 |
 | D7 向下兼容 | `engines.vscode ^1.60`、`@types/vscode 1.60.0` 锁定、ES2021、显式 `activationEvents` | SecretStorage 门槛 1.57；类型面锁定防止误用新版 API；1.60 必须显式声明激活事件 |
 | D8 测试隔离 | 集成测试通过 `globalThis.__zkViewerTestApi` 获取测试句柄 | VS Code 1.60 的 `extension.exports` 不可靠 |
+| D9 图标规范 | 活动栏 SVG 单色 `currentColor`、无背景色块 | 遵循 VS Code 视图容器图标规范，保证深/浅主题均可见 |
 
 ---
 

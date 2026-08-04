@@ -132,7 +132,7 @@
         },
         {
           "command": "zkViewer.search",
-          "when": "view == zkViewer.tree && zkViewer:connected == true",
+          "when": "view == zkViewer.tree",
           "group": "navigation@2"
         },
         {

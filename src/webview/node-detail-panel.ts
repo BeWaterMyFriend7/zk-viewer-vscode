@@ -13,6 +13,10 @@ export class NodeDetailPanel {
     return NodeDetailPanel.current?.controller;
   }
 
+  static getCurrentHtml(): string | undefined {
+    return NodeDetailPanel.current?.panel.webview.html;
+  }
+
   private readonly panel: vscode.WebviewPanel;
   private readonly controller: DetailPanelController;
 
@@ -86,6 +90,7 @@ export class NodeDetailPanel {
   <div id="stat"></div>
   <textarea id="data" spellcheck="false" placeholder="Node data"></textarea>
   <div class="toolbar">
+    <button id="edit">Edit</button>
     <button id="save">Save</button>
     <span id="status"></span>
   </div>

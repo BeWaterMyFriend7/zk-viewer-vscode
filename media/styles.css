@@ -27,6 +27,25 @@ body {
   white-space: pre;
 }
 
+button {
+  font-family: var(--vscode-font-family);
+  font-size: 12px;
+  padding: 4px 12px;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  border: 1px solid var(--vscode-button-border, transparent);
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button:not(:disabled):hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
 .toolbar {
   margin-top: 8px;
   display: flex;

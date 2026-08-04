@@ -2,12 +2,21 @@
 (function () {
   const vscode = acquireVsCodeApi();
   const dataInput = document.getElementById('data');
+  const editButton = document.getElementById('edit');
   const saveButton = document.getElementById('save');
   const status = document.getElementById('status');
   const statBox = document.getElementById('stat');
 
   let currentPath;
   let currentVersion;
+  let dataEditable = false;
+
+  function setEditing(enabled) {
+    dataInput.disabled = !enabled;
+    saveButton.disabled = !enabled;
+    editButton.disabled = enabled;
+    status.textContent = enabled ? 'Editing — changes apply on Save' : 'Read-only';
+  }
 
   function renderStat(stat) {
     const fields = {
@@ -33,15 +42,23 @@
     if (message.type === 'loadData') {
       currentPath = message.path;
       currentVersion = message.stat.version;
+      dataEditable = message.editable;
       dataInput.value = message.dataText;
-      dataInput.disabled = !message.editable;
-      saveButton.disabled = !message.editable;
+      editButton.disabled = !message.editable;
+      setEditing(false);
       renderStat(message.stat);
-      status.textContent = message.kind;
+      status.textContent = message.editable ? 'Read-only — click Edit to modify' : message.kind + ' (read-only)';
     } else if (message.type === 'saved') {
       status.textContent = 'Saved at version ' + currentVersion;
+      setEditing(false);
     } else if (message.type === 'error') {
       status.textContent = 'Error: ' + message.message;
+    }
+  });
+
+  editButton.addEventListener('click', () => {
+    if (dataEditable) {
+      setEditing(true);
     }
   });
 

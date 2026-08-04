@@ -31,6 +31,9 @@ suite('Detail panel (mock)', () => {
     assert.strictEqual(loaded?.path, '/app/config');
     assert.strictEqual(loaded?.stat.numChildren, 0);
 
+    const html = api.detailPanelHtml() ?? '';
+    assert.ok(html.includes('id="edit"'), 'the panel should provide an Edit button');
+
     await controller?.handleMessage({
       type: 'save',
       path: '/app/config',
