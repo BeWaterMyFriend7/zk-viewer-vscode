@@ -340,13 +340,24 @@ async function promptSearchOptions(): Promise<SearchOptions | undefined> {
   return { mode: modePick.mode, query: query.trim(), subtree };
 }
 
-async function searchCommand(options?: SearchOptions): Promise<unknown> {
+function isSearchOptions(value: unknown): value is SearchOptions {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.mode === 'string' && typeof candidate.query === 'string';
+}
+
+async function searchCommand(arg?: unknown): Promise<unknown> {
   const client = manager.getClient();
   if (!client) {
     void vscode.window.showInformationMessage('Not connected.');
     return;
   }
-  const opts = options ?? (await promptSearchOptions());
+  // view/title buttons pass the TreeView as the first argument; only treat
+  // arguments that actually look like SearchOptions as explicit options.
+  const explicitOptions = isSearchOptions(arg) ? arg : undefined;
+  const opts = explicitOptions ?? (await promptSearchOptions());
   if (!opts) {
     return;
   }
@@ -354,7 +365,7 @@ async function searchCommand(options?: SearchOptions): Promise<unknown> {
   try {
     const results = await searchNodes(client, { ...opts, maxNodes });
     log(`Search "${opts.query}" (${opts.mode}): ${results.length} results`);
-    if (options) {
+    if (explicitOptions) {
       return results;
     }
     if (results.length === 0) {

@@ -44,4 +44,23 @@ suite('Search and navigation (mock)', () => {
 
     await vscode.commands.executeCommand('zkViewer.disconnect');
   });
+
+  test('title-bar invocation (TreeView argument) prompts instead of short-circuiting', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/app', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/app/config', Buffer.from('{"role":"web"}'), 'PERSISTENT');
+
+    // VS Code passes the TreeView as the first argument to view/title commands.
+    // It must not be mistaken for explicit SearchOptions; in the headless host
+    // the prompt is cancelled, so the command resolves to undefined.
+    const viewLike = { id: 'zkViewer.tree', visible: true };
+    const result = (await vscode.commands.executeCommand('zkViewer.search', viewLike)) as unknown;
+    assert.strictEqual(result, undefined, 'a view-like argument must not return search results');
+
+    await vscode.commands.executeCommand('zkViewer.disconnect');
+  });
 });
