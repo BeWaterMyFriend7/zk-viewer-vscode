@@ -14,7 +14,13 @@ async function main() {
 
   const launchArgs = ['--skip-welcome', '--skip-release-notes'];
   if (process.platform === 'linux') {
-    launchArgs.push('--no-sandbox', '--disable-gpu');
+    launchArgs.push(
+      '--no-sandbox',
+      '--disable-gpu',
+      // CI runners have no system keyring; let Electron fall back to a basic
+      // file-based password store so SecretStorage calls do not throw.
+      '--password-store=basic',
+    );
   }
 
   try {

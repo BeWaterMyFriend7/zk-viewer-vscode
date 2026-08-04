@@ -7,6 +7,10 @@ export interface SecretStorageLike {
 /**
  * Namespaced wrapper over any SecretStorage-like implementation (VS Code's
  * SecretStorage or a test fake). Keeps secrets out of plain config files.
+ *
+ * Access is best-effort: on platforms without a keyring (e.g. Linux CI
+ * runners) SecretStorage operations can throw; credentials are optional, so
+ * failures degrade to "no password" instead of breaking the whole flow.
  */
 export class SecretStorageWrapper implements SecretStorageLike {
   constructor(
@@ -14,15 +18,27 @@ export class SecretStorageWrapper implements SecretStorageLike {
     private readonly prefix = 'zkViewer.',
   ) {}
 
-  get(key: string): Thenable<string | undefined> {
-    return this.storage.get(this.prefix + key);
+  async get(key: string): Promise<string | undefined> {
+    try {
+      return await this.storage.get(this.prefix + key);
+    } catch {
+      return undefined;
+    }
   }
 
-  store(key: string, value: string): Thenable<void> {
-    return this.storage.store(this.prefix + key, value);
+  async store(key: string, value: string): Promise<void> {
+    try {
+      await this.storage.store(this.prefix + key, value);
+    } catch {
+      // keep going; credentials are optional
+    }
   }
 
-  delete(key: string): Thenable<void> {
-    return this.storage.delete(this.prefix + key);
+  async delete(key: string): Promise<void> {
+    try {
+      await this.storage.delete(this.prefix + key);
+    } catch {
+      // keep going; credentials are optional
+    }
   }
 }

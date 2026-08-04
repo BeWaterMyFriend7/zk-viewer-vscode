@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '发布版本号（不带 v 前缀），例如 0.2.0'
+        required: true
+        default: '0.2.0'
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish VSIX
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Static checks
+        run: |
+          npm run compile
+          npm run lint
+          npm run format:check
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Performance tests
+        run: npm run test:perf
+      - name: Integration tests (headless)
+        run: xvfb-run -a npm run test:integration
+      - name: Build VSIX
+        run: npm run package
+      - name: Verify VSIX contents
+        run: |
+          tar -tf dist/zk-viewer-vscode.vsix | grep -E 'extension/package.json|out/src/extension.js|media/detail.js'
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: zk-viewer-vscode-vsix
+          path: dist/zk-viewer-vscode.vsix
+          if-no-files-found: error
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # tag 推送：版本取自 tag（v0.2.0 → 0.2.0）
+          # 手动触发：版本取输入框，缺少对应 tag 时 gh 会自动创建
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            TAG="$GITHUB_REF_NAME"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+            VERSION="${VERSION#v}"
+            TAG="v${VERSION}"
+          fi
+          gh release create "$TAG" dist/zk-viewer-vscode.vsix \
+            --title "zk-viewer-vscode $VERSION" \
+            --notes "自动构建的 VSIX 安装包（版本 $VERSION）。" \
+            --generate-notes \
+          || gh release upload "$TAG" dist/zk-viewer-vscode.vsix --clobber
