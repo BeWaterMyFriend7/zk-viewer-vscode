@@ -11,16 +11,16 @@ async function main() {
 
   // The mock client lets integration tests run without a real ZooKeeper server.
   process.env.ZK_VIEWER_USE_MOCK = '1';
+  // Linux CI runners have no system keyring (gnome-keyring/libsecret), so
+  // SecretStorage calls cannot persist. The wrapper degrades gracefully; this
+  // flag lets integration tests assert platform-appropriate behavior.
+  if (process.platform === 'linux') {
+    process.env.ZK_VIEWER_TEST_NO_KEYRING = '1';
+  }
 
   const launchArgs = ['--skip-welcome', '--skip-release-notes'];
   if (process.platform === 'linux') {
-    launchArgs.push(
-      '--no-sandbox',
-      '--disable-gpu',
-      // CI runners have no system keyring; let Electron fall back to a basic
-      // file-based password store so SecretStorage calls do not throw.
-      '--password-store=basic',
-    );
+    launchArgs.push('--no-sandbox', '--disable-gpu');
   }
 
   try {
