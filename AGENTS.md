@@ -58,8 +58,6 @@ zk-viewer-vscode 是一个 VS Code 扩展，为 Apache ZooKeeper 提供轻量级
 - 修复搜索展示逻辑
 - 调整文档
 ```
-
-- 一次提交只包含一个逻辑变更
 - 相关 Issue 编号写入提交正文
 
 ### Pull Request
