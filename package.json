@@ -30,7 +30,8 @@
     "onCommand:zkViewer.editNode",
     "onCommand:zkViewer.deleteNode",
     "onCommand:zkViewer.copyPath",
-    "onCommand:zkViewer.openNodeDetail"
+    "onCommand:zkViewer.openNodeDetail",
+    "onCommand:zkViewer.setTreeSort"
   ],
   "contributes": {
     "viewsContainers": {
@@ -121,6 +122,12 @@
         "command": "zkViewer.openNodeDetail",
         "title": "Open Details",
         "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.setTreeSort",
+        "title": "Sort Nodes...",
+        "category": "ZooKeeper",
+        "icon": "$(sort-precedence)"
       }
     ],
     "menus": {
@@ -157,6 +164,11 @@
         },
         {
           "command": "zkViewer.removeConnection",
+          "when": "view == zkViewer.tree",
+          "group": "zoo"
+        },
+        {
+          "command": "zkViewer.setTreeSort",
           "when": "view == zkViewer.tree",
           "group": "zoo"
         }
@@ -224,9 +236,9 @@
         },
         "zkViewer.treeSort": {
           "type": "string",
-          "enum": ["name", "name-desc", "none"],
+          "enum": ["name", "name-desc", "ctime", "ctime-desc", "mtime", "mtime-desc", "none"],
           "default": "name",
-          "description": "Sort order for child nodes in the tree: by name ascending, descending, or keep the server order."
+          "description": "Sort order for child nodes: by name, creation time or modification time (each ascending or descending), or keep the server order."
         },
         "zkViewer.dev.useMockClient": {
           "type": "boolean",

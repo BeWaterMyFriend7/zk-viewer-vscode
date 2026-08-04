@@ -21,6 +21,8 @@ export interface MockZkClientOptions {
   password?: string;
   failConnect?: boolean;
   connectError?: Error;
+  /** Deterministic clock for stat timestamps; default is a monotonic counter. */
+  timeSource?: () => string;
 }
 
 function normalizePath(path: string): string {
@@ -42,17 +44,13 @@ function parentOf(path: string): { parent: string; name: string } {
   return { parent: normalized.slice(0, idx), name: normalized.slice(idx + 1) };
 }
 
-function nowString(): string {
-  return new Date().toISOString();
-}
-
-function statForNode(data: Buffer, ephemeralOwner: string, numChildren: number): ZnodeStat {
+function statForNode(data: Buffer, ephemeralOwner: string, numChildren: number, time: string): ZnodeStat {
   return {
     czxid: '0x1',
     mzxid: '0x1',
     pzxid: '0x1',
-    ctime: nowString(),
-    mtime: nowString(),
+    ctime: time,
+    mtime: time,
     version: 0,
     cversion: 0,
     aversion: 0,
@@ -67,14 +65,20 @@ export class MockZkClient implements ZkClient {
   private readonly stateListeners = new Set<(state: ZkConnectionState) => void>();
   private currentState: ZkConnectionState = 'closed';
   private sequenceCounter = 0;
+  private clockCounter = 0;
+  private readonly baseTime: number;
+  private readonly timeSource: () => string;
   closeCalls = 0;
   readonly childrenRequestLog: string[] = [];
   readonly removalLog: string[] = [];
 
   constructor(private readonly opts: MockZkClientOptions = {}) {
+    this.baseTime = Date.now();
+    this.timeSource =
+      opts.timeSource ?? (() => new Date(this.baseTime + this.clockCounter++ * 1000).toISOString());
     this.nodes.set('/', {
       data: Buffer.alloc(0),
-      stat: statForNode(Buffer.alloc(0), '0x0', 0),
+      stat: statForNode(Buffer.alloc(0), '0x0', 0, this.timeSource()),
       children: new Map(),
       ephemeral: false,
       sequential: false,
@@ -120,7 +124,7 @@ export class MockZkClient implements ZkClient {
     this.nodes.clear();
     this.nodes.set('/', {
       data: Buffer.alloc(0),
-      stat: statForNode(Buffer.alloc(0), '0x0', 0),
+      stat: statForNode(Buffer.alloc(0), '0x0', 0, this.timeSource()),
       children: new Map(),
       ephemeral: false,
       sequential: false,
@@ -185,7 +189,7 @@ export class MockZkClient implements ZkClient {
       finalPath = parent === '/' ? `/${finalName}` : `${parent}/${finalName}`;
     }
     const ephemeral = mode === 'EPHEMERAL' || mode === 'EPHEMERAL_SEQUENTIAL';
-    const stat = statForNode(data, ephemeral ? '0xdeadbeef' : '0x0', 0);
+    const stat = statForNode(data, ephemeral ? '0xdeadbeef' : '0x0', 0, this.timeSource());
     parentNode.children.set(finalName, {
       data: Buffer.from(data),
       stat,
@@ -207,7 +211,7 @@ export class MockZkClient implements ZkClient {
     }
     node.data = Buffer.from(data);
     node.stat.version += 1;
-    node.stat.mtime = nowString();
+    node.stat.mtime = this.timeSource();
     node.stat.dataLength = data.length;
   }
 

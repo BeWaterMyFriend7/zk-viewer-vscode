@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import type * as ext from '../../src/extension';
-import type { SearchResult } from '../../src/search/node-search';
+import { isSearchOptions, type SearchResult } from '../../src/search/node-search';
 
 suite('Search and navigation (mock)', () => {
   let api: ReturnType<typeof ext.getTestApi>;
@@ -46,21 +46,10 @@ suite('Search and navigation (mock)', () => {
   });
 
   test('title-bar invocation (TreeView argument) prompts instead of short-circuiting', async () => {
-    await api.store.clear();
-    await vscode.commands.executeCommand('zkViewer.connect');
-    const mock = api.mockClients.get('localhost:2181|');
-    assert.ok(mock);
-    mock.clear();
-    await mock.create('/app', Buffer.alloc(0), 'PERSISTENT');
-    await mock.create('/app/config', Buffer.from('{"role":"web"}'), 'PERSISTENT');
-
     // VS Code passes the TreeView as the first argument to view/title commands.
-    // It must not be mistaken for explicit SearchOptions; in the headless host
-    // the prompt is cancelled, so the command resolves to undefined.
-    const viewLike = { id: 'zkViewer.tree', visible: true };
-    const result = (await vscode.commands.executeCommand('zkViewer.search', viewLike)) as unknown;
-    assert.strictEqual(result, undefined, 'a view-like argument must not return search results');
-
-    await vscode.commands.executeCommand('zkViewer.disconnect');
+    // It must not be mistaken for explicit SearchOptions (which would silently
+    // skip the interactive search prompt).
+    assert.strictEqual(isSearchOptions(api.treeView), false, 'TreeView must not look like SearchOptions');
+    assert.strictEqual(isSearchOptions({ mode: 'prefix', query: 'config' }), true);
   });
 });

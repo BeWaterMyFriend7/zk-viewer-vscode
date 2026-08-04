@@ -7,9 +7,25 @@ export interface ZkNodeDescriptor {
   name: string;
   type: NodeType;
   collapsibleState: 'none' | 'collapsed';
+  stat?: ZkNodeTimes;
 }
 
-export type TreeSortOrder = 'name' | 'name-desc' | 'none';
+export interface ZkNodeTimes {
+  ctime: string;
+  mtime: string;
+}
+
+export type TreeSortOrder = 'name' | 'name-desc' | 'ctime' | 'ctime-desc' | 'mtime' | 'mtime-desc' | 'none';
+
+export const TREE_SORT_ORDERS: ReadonlyArray<{ value: TreeSortOrder; label: string }> = [
+  { value: 'name', label: 'Name (A → Z)' },
+  { value: 'name-desc', label: 'Name (Z → A)' },
+  { value: 'ctime', label: 'Created (oldest first)' },
+  { value: 'ctime-desc', label: 'Created (newest first)' },
+  { value: 'mtime', label: 'Modified (oldest first)' },
+  { value: 'mtime-desc', label: 'Modified (newest first)' },
+  { value: 'none', label: 'Server order' },
+];
 
 export const TREE_GETSTAT_CONCURRENCY = 32;
 
@@ -21,8 +37,32 @@ export function sortDescriptors(descriptors: ZkNodeDescriptor[], order: TreeSort
   if (order === 'none') {
     return descriptors;
   }
-  const factor = order === 'name-desc' ? -1 : 1;
-  return [...descriptors].sort((a, b) => a.name.localeCompare(b.name) * factor);
+  const descending = order.endsWith('-desc');
+  const key = order.replace('-desc', '') as 'name' | 'ctime' | 'mtime';
+  const factor = descending ? -1 : 1;
+  return [...descriptors].sort((a, b) => {
+    if (key === 'name') {
+      return a.name.localeCompare(b.name) * factor;
+    }
+    const aTime = a.stat?.[key] ?? '';
+    const bTime = b.stat?.[key] ?? '';
+    return aTime.localeCompare(bTime) * factor;
+  });
+}
+
+/**
+ * Pure path-based parent derivation (no network access). Kept outside the
+ * vscode-dependent provider so it is unit-testable without the extension host.
+ */
+export function getParentDescriptor(element: ZkNodeDescriptor): ZkNodeDescriptor | undefined {
+  const path = element.path;
+  if (path === '/') {
+    return undefined;
+  }
+  const idx = path.lastIndexOf('/');
+  const parentPath = idx === 0 ? '/' : path.slice(0, idx);
+  const parentName = parentPath === '/' ? '/' : parentPath.slice(parentPath.lastIndexOf('/') + 1);
+  return { path: parentPath, name: parentName, type: 'persistent', collapsibleState: 'collapsed' };
 }
 
 /**
@@ -43,13 +83,21 @@ export async function listChildDescriptors(
     async (name) => {
       const childPath = joinPath(path, name);
       let type: NodeType = 'persistent';
+      let times: ZkNodeTimes | undefined;
       try {
         const stat = await client.getStat(childPath);
         type = stat ? detectNodeType(stat, name) : 'persistent';
+        times = stat ? { ctime: stat.ctime, mtime: stat.mtime } : undefined;
       } catch {
         type = 'persistent';
       }
-      return { path: childPath, name, type, collapsibleState: 'collapsed' };
+      return {
+        path: childPath,
+        name,
+        type,
+        collapsibleState: 'collapsed',
+        stat: times,
+      };
     },
   );
   return sortDescriptors(descriptors, sort);

@@ -75,4 +75,28 @@ suite('Node tree (mock)', () => {
     await config.update('treeSort', undefined, vscode.ConfigurationTarget.Global);
     await vscode.commands.executeCommand('zkViewer.disconnect');
   });
+
+  test('creation-time sort configuration takes effect through the provider', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/z1', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/a2', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/m3', Buffer.alloc(0), 'PERSISTENT');
+
+    const config = vscode.workspace.getConfiguration('zkViewer');
+    await config.update('treeSort', 'ctime-desc', vscode.ConfigurationTarget.Global);
+    const roots = await api.treeProvider.getChildren(undefined);
+    const children = await api.treeProvider.getChildren(roots[0]);
+    assert.deepStrictEqual(
+      children.map((node) => node.descriptor.name),
+      ['m3', 'a2', 'z1'],
+      'newest created node comes first with ctime-desc',
+    );
+
+    await config.update('treeSort', undefined, vscode.ConfigurationTarget.Global);
+    await vscode.commands.executeCommand('zkViewer.disconnect');
+  });
 });

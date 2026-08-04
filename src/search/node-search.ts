@@ -18,6 +18,18 @@ export interface SearchResult {
   matchedBy: 'name' | 'content';
 }
 
+/**
+ * Guards command arguments: VS Code passes the TreeView as the first argument
+ * to view/title commands, which must not be mistaken for explicit options.
+ */
+export function isSearchOptions(value: unknown): value is SearchOptions {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.mode === 'string' && typeof candidate.query === 'string';
+}
+
 export const SEARCH_DEFAULT_CONCURRENCY = 16;
 export const SEARCH_DEFAULT_MAX_DATA_BYTES = 1024 * 1024;
 

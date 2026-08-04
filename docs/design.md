@@ -80,7 +80,7 @@ test/unit|perf|integration/
 
 - `NodeTreeProvider`（TreeDataProvider）：根节点为 `/`，子节点按需展开；
 - `listChildDescriptors`：仅请求当前层级的 `getChildren` + **并发** `getStat`（限流窗口 32）识别类型，满足懒加载，宽层级不再串行化；
-- `treeSort`：子节点按名称升序 / 降序 / 保持服务器顺序（配置 `zkViewer.treeSort`，默认按名称升序）；
+- `treeSort`：子节点支持按名称、创建时间（`ctime`）、更新时间（`mtime`）各升/降序，以及服务器顺序（配置 `zkViewer.treeSort`，默认名称升序；侧边栏菜单「Sort Nodes...」可交互切换）；
 - `node-model`：由 `ephemeralOwner` 与顺序命名（`-\d{10}$`）推导四种节点类型，映射 Codicon。
 
 **活动栏图标规范：** SVG 必须为单色（`currentColor`）、无背景色块、无渐变，由 VS Code 主题着色，否则在新版 VS Code（尤其 Windows）中不渲染。
@@ -124,7 +124,7 @@ test/unit|perf|integration/
 | D7 向下兼容 | `engines.vscode ^1.60`、`@types/vscode 1.60.0` 锁定、ES2021、显式 `activationEvents` | SecretStorage 门槛 1.57；类型面锁定防止误用新版 API；1.60 必须显式声明激活事件 |
 | D8 测试隔离 | 集成测试通过 `globalThis.__zkViewerTestApi` 获取测试句柄 | VS Code 1.60 的 `extension.exports` 不可靠 |
 | D9 图标规范 | 活动栏 SVG 单色 `currentColor`、无背景色块 | 遵循 VS Code 视图容器图标规范，保证深/浅主题均可见 |
-| D10 并发与排序 | 树与搜索请求按批次并发（树 32 / 搜索 16），子节点按名称排序可配置 | 串行网络往返是大数据量下卡顿主因；排序便于人工查找 |
+| D10 并发与排序 | 树与搜索请求按批次并发（树 32 / 搜索 16）；子节点可按名称 / 创建时间 / 更新时间排序（stat 已在并发获取类型时带回，无需额外请求） | 串行网络往返是大数据量下卡顿主因；排序便于人工查找 |
 
 ---
 
@@ -189,7 +189,7 @@ npm run package          # 打包 dist/zk-viewer-vscode.vsix
 | --- | --- | --- |
 | M0 脚手架 | 构建 / 测试 / 打包基础设施 | compile、lint、unit、integration(1.60)、vsix 全绿 |
 | M1 连接管理 | 多连接、SecretStorage、重连、Mock | 状态机 / 配置 CRUD / 认证参数 / 重连用例通过 |
-| M2 节点树 | 懒加载、类型图标、右键菜单 | 请求次数断言、类型映射、菜单贡献断言 |
+| M2 节点树 | 懒加载、类型图标、右键菜单、多方式排序 | 请求次数断言、类型映射、菜单贡献断言、排序断言 |
 | M3 查询搜索 | 路径定位、前缀/通配符/正则/内容 | 命中集断言、搜索+reveal 集成通过 |
 | M4 JSON 面板 | 格式化展示、版本校验保存 | JSON 分类、BadVersion 不覆盖、保存流程通过 |
 | M5 节点操作 | 增 / 改 / 删（递归）/ 刷新 | 删除顺序、取消确认、非法名拒绝、全流程集成 |

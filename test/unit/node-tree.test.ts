@@ -1,6 +1,11 @@
 import * as assert from 'assert';
 import { MockZkClient } from '../../src/zk/mock-zk';
-import { listChildDescriptors, sortDescriptors, type ZkNodeDescriptor } from '../../src/tree/node-tree';
+import {
+  getParentDescriptor,
+  listChildDescriptors,
+  sortDescriptors,
+  type ZkNodeDescriptor,
+} from '../../src/tree/node-tree';
 
 function descriptor(name: string): ZkNodeDescriptor {
   return { path: `/${name}`, name, type: 'persistent', collapsibleState: 'collapsed' };
@@ -85,5 +90,92 @@ describe('sortDescriptors', () => {
   it('keeps server order for "none"', () => {
     const input = [descriptor('z'), descriptor('a')];
     assert.strictEqual(sortDescriptors(input, 'none'), input);
+  });
+});
+
+describe('getParentDescriptor', () => {
+  it('derives the parent path from the element path', () => {
+    const child = getParentDescriptor({
+      path: '/app/config',
+      name: 'config',
+      type: 'persistent',
+      collapsibleState: 'collapsed',
+    });
+    assert.strictEqual(child?.path, '/app');
+    assert.strictEqual(child?.name, 'app');
+  });
+
+  it('returns the root for a top-level node', () => {
+    const parent = getParentDescriptor({
+      path: '/app',
+      name: 'app',
+      type: 'persistent',
+      collapsibleState: 'collapsed',
+    });
+    assert.strictEqual(parent?.path, '/');
+  });
+
+  it('returns undefined for the root itself', () => {
+    const parent = getParentDescriptor({
+      path: '/',
+      name: '/',
+      type: 'persistent',
+      collapsibleState: 'collapsed',
+    });
+    assert.strictEqual(parent, undefined);
+  });
+});
+
+describe('time-based tree sorting', () => {
+  it('sorts by creation time using stat timestamps', async () => {
+    const client = new MockZkClient();
+    await client.connect();
+    await client.create('/z1', Buffer.alloc(0), 'PERSISTENT');
+    await client.create('/a2', Buffer.alloc(0), 'PERSISTENT');
+    await client.create('/m3', Buffer.alloc(0), 'PERSISTENT');
+
+    const createdAsc = await listChildDescriptors(client, '/', 'ctime');
+    const createdDesc = await listChildDescriptors(client, '/', 'ctime-desc');
+
+    assert.deepStrictEqual(
+      createdAsc.map((d) => d.name),
+      ['z1', 'a2', 'm3'],
+      'creation time ascending follows creation order',
+    );
+    assert.deepStrictEqual(
+      createdDesc.map((d) => d.name),
+      ['m3', 'a2', 'z1'],
+    );
+  });
+
+  it('sorts by modification time after updates', async () => {
+    const client = new MockZkClient();
+    await client.connect();
+    await client.create('/z1', Buffer.alloc(0), 'PERSISTENT');
+    await client.create('/a2', Buffer.alloc(0), 'PERSISTENT');
+    await client.create('/m3', Buffer.alloc(0), 'PERSISTENT');
+
+    await client.setData('/a2', Buffer.from('x'), 0);
+
+    const modifiedAsc = await listChildDescriptors(client, '/', 'mtime');
+    const modifiedDesc = await listChildDescriptors(client, '/', 'mtime-desc');
+
+    assert.deepStrictEqual(
+      modifiedAsc.map((d) => d.name),
+      ['z1', 'm3', 'a2'],
+      'modification time ascending puts the updated node last',
+    );
+    assert.deepStrictEqual(
+      modifiedDesc.map((d) => d.name),
+      ['a2', 'm3', 'z1'],
+    );
+  });
+
+  it('falls back to server order when stat times are missing', async () => {
+    const withoutTimes = [descriptor('b'), descriptor('a')];
+    assert.deepStrictEqual(
+      sortDescriptors(withoutTimes, 'ctime').map((d) => d.name),
+      ['b', 'a'],
+    );
   });
 });

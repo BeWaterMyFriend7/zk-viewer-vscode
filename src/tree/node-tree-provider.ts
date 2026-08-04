@@ -1,7 +1,12 @@
 import * as vscode from 'vscode';
 import type { ZkClient } from '../zk/zk-client';
 import { iconForType } from './node-model';
-import { listChildDescriptors, type TreeSortOrder, type ZkNodeDescriptor } from './node-tree';
+import {
+  getParentDescriptor,
+  listChildDescriptors,
+  type TreeSortOrder,
+  type ZkNodeDescriptor,
+} from './node-tree';
 
 export class ZkNode extends vscode.TreeItem {
   constructor(readonly descriptor: ZkNodeDescriptor) {
@@ -44,6 +49,19 @@ export class NodeTreeProvider implements vscode.TreeDataProvider<ZkNode> {
     }
   }
 
+  /**
+   * Derives the parent node from the element path without network access.
+   * treeView.reveal() walks this chain to locate an element, so a provider
+   * that rebuilds nodes on every getChildren must implement getParent.
+   */
+  getParent(element: ZkNode): ZkNode | undefined {
+    const parentDescriptor = getParentDescriptor(element.descriptor);
+    if (!parentDescriptor) {
+      return undefined;
+    }
+    return new ZkNode(parentDescriptor);
+  }
+
   refresh(): void {
     this.changeEmitter.fire(undefined);
   }
@@ -74,5 +92,19 @@ export async function revealPathInTree(
   path: string,
 ): Promise<void> {
   const node = await findNodeInTree(provider, path);
+  // Searching happens from the command palette or the sidebar title bar; make
+  // sure the ZooKeeper container is visible before revealing the node.
+  try {
+    await vscode.commands.executeCommand('workbench.view.extension.zkViewer');
+  } catch {
+    // the view container command is unavailable in some hosts; reveal below
+    // will surface a clearer error if the tree is not visible
+  }
+  for (let i = 0; i < 20 && !treeView.visible; i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  if (!treeView.visible) {
+    throw new Error('ZooKeeper 侧边栏未打开，无法定位节点，请先打开侧边栏再试');
+  }
   await treeView.reveal(node, { expand: true, focus: true, select: true });
 }

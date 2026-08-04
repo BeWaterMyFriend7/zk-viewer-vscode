@@ -13,10 +13,11 @@ import {
 import { SecretStorageWrapper, type SecretStorageLike } from './connections/secret-storage';
 import { deleteNodeRecursively, validateNodeName } from './commands/node-commands';
 import { log } from './log/activity-log';
-import { searchNodes, type SearchOptions } from './search/node-search';
+import { isSearchOptions, searchNodes, type SearchOptions } from './search/node-search';
 import { resolvePath } from './search/path-resolver';
-import { findNodeInTree, NodeTreeProvider, revealPathInTree, type ZkNode } from './tree/node-tree-provider';
+import { NodeTreeProvider, revealPathInTree, type ZkNode } from './tree/node-tree-provider';
 import { NodeDetailPanel } from './webview/node-detail-panel';
+import { TREE_SORT_ORDERS, type TreeSortOrder } from './tree/node-tree';
 import { MockZkClient } from './zk/mock-zk';
 import { NodeZkClient, ZkError, ZkErrorCode } from './zk/zk-client';
 
@@ -290,13 +291,8 @@ async function gotoPathCommand(targetPath?: string): Promise<void> {
   }
   try {
     const resolved = await resolvePath(client, input);
-    const node = await findNodeInTree(treeProvider, resolved);
     lastRevealedPath = resolved;
-    try {
-      await treeView.reveal(node, { expand: true, focus: true, select: true });
-    } catch {
-      log(`Tree view not visible; resolved ${resolved} in data`, 'error');
-    }
+    await revealPathInTree(treeView, treeProvider, resolved);
     log(`Revealed ${resolved}`);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -340,14 +336,6 @@ async function promptSearchOptions(): Promise<SearchOptions | undefined> {
   return { mode: modePick.mode, query: query.trim(), subtree };
 }
 
-function isSearchOptions(value: unknown): value is SearchOptions {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  return typeof candidate.mode === 'string' && typeof candidate.query === 'string';
-}
-
 async function searchCommand(arg?: unknown): Promise<unknown> {
   const client = manager.getClient();
   if (!client) {
@@ -379,7 +367,13 @@ async function searchCommand(arg?: unknown): Promise<unknown> {
       { placeHolder: 'Search results', matchOnDescription: true },
     );
     if (picked) {
-      await revealPathInTree(treeView, treeProvider, picked.label);
+      try {
+        await revealPathInTree(treeView, treeProvider, picked.label);
+      } catch (revealErr) {
+        const message = revealErr instanceof Error ? revealErr.message : String(revealErr);
+        log(`Reveal failed: ${message}`, 'error');
+        void vscode.window.showErrorMessage(message);
+      }
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -545,6 +539,27 @@ async function copyPathCommand(node?: ZkNode): Promise<void> {
   void vscode.window.showInformationMessage(`Copied ${path}`);
 }
 
+async function setTreeSortCommand(): Promise<void> {
+  const current = vscode.workspace.getConfiguration('zkViewer').get<TreeSortOrder>('treeSort') ?? 'name';
+  const picked = await vscode.window.showQuickPick(
+    TREE_SORT_ORDERS.map((option) => ({
+      label: option.label,
+      description: option.value === current ? 'current' : undefined,
+      value: option.value,
+    })),
+    { placeHolder: 'Sort nodes by' },
+  );
+  if (!picked) {
+    return;
+  }
+  await vscode.workspace
+    .getConfiguration('zkViewer')
+    .update('treeSort', picked.value, vscode.ConfigurationTarget.Global);
+  treeProvider.refresh();
+  log(`Tree sort set to ${picked.value}`);
+  void vscode.window.showInformationMessage(`Sorted by: ${picked.label}`);
+}
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   log('zk-viewer-vscode activating');
   extensionContext = context;
@@ -588,6 +603,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerCommand(context, 'zkViewer.deleteNode', deleteNodeCommand);
   registerCommand(context, 'zkViewer.copyPath', copyPathCommand);
   registerCommand(context, 'zkViewer.openNodeDetail', openNodeDetailCommand);
+  registerCommand(context, 'zkViewer.setTreeSort', setTreeSortCommand);
 
   log('zk-viewer-vscode activated');
 }
