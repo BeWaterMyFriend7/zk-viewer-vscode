@@ -1,5 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-  <rect width="24" height="24" rx="4" fill="#1a1a1a"/>
-  <circle cx="12" cy="12" r="8" fill="none" stroke="#2d7ff9" stroke-width="1.6"/>
-  <text x="12" y="15.5" font-family="Consolas, monospace" font-size="9" font-weight="bold" fill="#2d7ff9" text-anchor="middle">ZK</text>
+  <rect width="24" height="24" rx="4" fill="#1e1e1e"/>
+  <g stroke="#2d7ff9" stroke-width="1.5" fill="none" stroke-linecap="round">
+    <path d="M12 7 L12 10"/>
+    <path d="M12 10 L7 14"/>
+    <path d="M12 10 L17 14"/>
+  </g>
+  <circle cx="12" cy="5" r="2.1" fill="#2d7ff9"/>
+  <circle cx="7" cy="16" r="2.1" fill="#4f8ff7"/>
+  <circle cx="17" cy="16" r="2.1" fill="#4f8ff7"/>
 </svg>

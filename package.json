@@ -55,17 +55,20 @@
       {
         "command": "zkViewer.connect",
         "title": "Connect",
-        "category": "ZooKeeper"
+        "category": "ZooKeeper",
+        "icon": "$(plug)"
       },
       {
         "command": "zkViewer.disconnect",
         "title": "Disconnect",
-        "category": "ZooKeeper"
+        "category": "ZooKeeper",
+        "icon": "$(debug-disconnect)"
       },
       {
         "command": "zkViewer.addConnection",
         "title": "Add Connection...",
-        "category": "ZooKeeper"
+        "category": "ZooKeeper",
+        "icon": "$(add)"
       },
       {
         "command": "zkViewer.editConnection",
@@ -123,29 +126,29 @@
     "menus": {
       "view/title": [
         {
-          "command": "zkViewer.connect",
-          "when": "view == zkViewer.tree && zkViewer:connected == false",
-          "group": "navigation"
-        },
-        {
-          "command": "zkViewer.disconnect",
-          "when": "view == zkViewer.tree && zkViewer:connected == true",
-          "group": "navigation"
+          "command": "zkViewer.addConnection",
+          "when": "view == zkViewer.tree",
+          "group": "navigation@1"
         },
         {
           "command": "zkViewer.search",
           "when": "view == zkViewer.tree && zkViewer:connected == true",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "zkViewer.refresh",
           "when": "view == zkViewer.tree && zkViewer:connected == true",
-          "group": "navigation"
+          "group": "navigation@3"
         },
         {
-          "command": "zkViewer.addConnection",
-          "when": "view == zkViewer.tree",
-          "group": "zoo"
+          "command": "zkViewer.connect",
+          "when": "view == zkViewer.tree && zkViewer:connected == false",
+          "group": "navigation@4"
+        },
+        {
+          "command": "zkViewer.disconnect",
+          "when": "view == zkViewer.tree && zkViewer:connected == true",
+          "group": "navigation@5"
         },
         {
           "command": "zkViewer.editConnection",

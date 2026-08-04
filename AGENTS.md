@@ -11,8 +11,7 @@ The extension follows the standard VS Code extension layout:
 - `src/` — TypeScript source: activation entry point, command handlers, tree views, and the ZooKeeper client wrapper
 - `media/` — webview assets (styles and scripts) for panel views
 - `test/` — integration tests that run inside the Extension Development Host
-- `docs/` — requirements and design documents (start with `REQUIREMENTS.md`)
-- `.code/change-plans/` — approved change-plan documents for the implementation milestones
+- `docs/` — `REQUIREMENTS.md` (requirements) and `design.md` (architecture & design decisions)
 - `package.json` — extension manifest: contributions, activation events, commands, and configuration
 - `.vscode/` — shared launch and task configuration for debugging
 

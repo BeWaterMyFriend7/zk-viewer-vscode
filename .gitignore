@@ -8,3 +8,5 @@ dist/
 .tmp-ext-install/
 *.log
 coverage/
+.code/
+.github/
