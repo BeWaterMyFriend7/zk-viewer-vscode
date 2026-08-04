@@ -1,0 +1,11 @@
+# 统一所有文本文件的行尾为 LF，避免 Windows 检出时被 core.autocrlf
+# 转成 CRLF 导致 Prettier/格式检查在 CI 上不一致（.gitattributes 优先于
+# 用户级 core.autocrlf 配置）。
+* text=auto eol=lf
+
+# 二进制/特殊文件保持原样
+*.vsix binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.node binary
