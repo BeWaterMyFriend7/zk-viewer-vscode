@@ -75,4 +75,34 @@ suite('Search and navigation (mock)', () => {
 
     await vscode.commands.executeCommand('zkViewer.disconnect');
   });
+
+  test('subtree search limits results to the target node subtree', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/app', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/app/config', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/app/config-prod', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/svc-1', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/svc-1/config', Buffer.alloc(0), 'PERSISTENT');
+
+    // Right-click passes the node as the first argument; explicit options
+    // skip the interactive prompts but the subtree is forced to the node path.
+    const outcome = (await vscode.commands.executeCommand(
+      'zkViewer.searchSubtree',
+      { descriptor: { path: '/app' } },
+      { mode: 'prefix', query: 'config' },
+    )) as SearchOutcome;
+
+    assert.deepStrictEqual(
+      outcome.results.map((r) => r.path),
+      ['/app/config', '/app/config-prod'],
+      'matches outside the subtree must be excluded',
+    );
+    assert.strictEqual(outcome.truncated, false);
+
+    await vscode.commands.executeCommand('zkViewer.disconnect');
+  });
 });

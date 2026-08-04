@@ -88,9 +88,11 @@ test/unit|perf|integration/
 ### 3.3 查询搜索（search/）
 
 - `path-resolver`：路径规范化（去重复斜杠 / 末尾斜杠）与存在性校验；
-- `node-search`：**层级并行**遍历（每层节点按并发窗口批量请求，默认 16），支持精确路径 / 前缀 / 通配符（`*`、`?`）/ 正则 / 内容五种模式，`maxNodes` 限制访问上限，结果按路径排序；精确路径模式为直接查找（规范化路径 + `exists`），不遍历全树；
-- 内容搜索先 `getStat` 预检：`dataLength == 0` 或超过 `maxDataBytes` 的节点直接跳过，避免下载空数据与超大节点。
-- `SearchOutcome`：搜索返回 `{ results, truncated, visitedNodes, maxNodes }`；`truncated` 标记遍历是否触及上限（结果可能不完整），界面据此提示用户。
+- `node-search`：使用 `walkTree` **全局并发池**遍历（默认并发 16，worker 空闲即取下一个节点，深树与宽树均不被层间串行拖慢），支持精确路径 / 前缀 / 通配符（`*`、`?`）/ 正则 / 内容五种模式，`maxNodes` 限制访问上限，结果按路径排序；精确路径模式为直接查找（规范化路径 + `exists`），不遍历全树；
+- 内容搜索**两阶段**：先高并发 `getStat` 预检（跳过空节点，`maxDataBytes > 0` 时跳过超大节点并计数），命中候选再以低并发窗口下载数据匹配——保证完整性的同时避免无谓的大块数据传输；
+- `SearchOutcome`：`{ results, truncated, visitedNodes, maxNodes, oversizedSkipped, cancelled }`；`truncated` 标记遍历触及上限（默认 500000，0 = 无限制），`oversizedSkipped` 提示被跳过的超大节点数，`cancelled` 标记用户取消；
+- **完整性优先**：`maxNodeDataBytes` 默认 0（不过滤），`maxSearchNodes` 默认 500000（可设 0 无限制），搜索结果以完整为第一目标，速度优化不牺牲完整性；
+- **子树搜索**：`zkViewer.searchSubtree` 命令（右键菜单）以节点路径为搜索根，遍历范围缩小后速度与完整性兼得。
 
 ### 3.4 详情面板（webview/）
 
@@ -125,7 +127,9 @@ test/unit|perf|integration/
 | D7 向下兼容 | `engines.vscode ^1.60`、`@types/vscode 1.60.0` 锁定、ES2021、显式 `activationEvents` | SecretStorage 门槛 1.57；类型面锁定防止误用新版 API；1.60 必须显式声明激活事件 |
 | D8 测试隔离 | 集成测试通过 `globalThis.__zkViewerTestApi` 获取测试句柄 | VS Code 1.60 的 `extension.exports` 不可靠 |
 | D9 图标规范 | 活动栏 SVG 单色 `currentColor`、无背景色块 | 遵循 VS Code 视图容器图标规范，保证深/浅主题均可见 |
-| D10 并发与排序 | 树与搜索请求按批次并发（树 32 / 搜索 16）；子节点可按名称 / 创建时间 / 更新时间排序（stat 已在并发获取类型时带回，无需额外请求） | 串行网络往返是大数据量下卡顿主因；排序便于人工查找 |
+| D10 并发与排序 | 树子节点类型查询按批次并发（32）；子节点可按名称 / 创建时间 / 更新时间排序（stat 已在并发获取类型时带回，无需额外请求） | 串行网络往返是大数据量下卡顿主因；排序便于人工查找 |
+| D11 全局并发游走 | `walkTree` 固定 worker 池 + 共享队列，替代层级批次 | 慢节点不再拖累同层，深树不再逐层串行 |
+| D12 完整性优先 | `maxNodeDataBytes` 默认 0（不过滤），`maxSearchNodes` 默认 500000（0 = 无限制），截断 / 跳过均明确提示 | 搜索以"结果全"为第一目标，速度优化不牺牲完整性 |
 
 ---
 

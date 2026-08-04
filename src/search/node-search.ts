@@ -1,5 +1,5 @@
 import type { ZkClient } from '../zk/zk-client';
-import { mapLimit } from '../utils/async';
+import { mapLimit, walkTree } from '../utils/async';
 import { normalizePath } from './path-resolver';
 
 export type SearchMode = 'exact' | 'prefix' | 'wildcard' | 'regex' | 'content';
@@ -8,9 +8,12 @@ export interface SearchOptions {
   mode: SearchMode;
   query: string;
   subtree?: string;
+  /** 0 or negative means unlimited. */
   maxNodes?: number;
+  /** 0 or negative means no size filter (complete results). */
   maxDataBytes?: number;
   concurrency?: number;
+  isCancelled?: () => boolean;
 }
 
 export interface SearchResult {
@@ -25,6 +28,10 @@ export interface SearchOutcome {
   truncated: boolean;
   visitedNodes: number;
   maxNodes: number;
+  /** Nodes skipped because they exceeded maxDataBytes (content mode only). */
+  oversizedSkipped: number;
+  /** True when the search was cancelled by the user. */
+  cancelled: boolean;
 }
 
 /**
@@ -40,8 +47,8 @@ export function isSearchOptions(value: unknown): value is SearchOptions {
 }
 
 export const SEARCH_DEFAULT_CONCURRENCY = 16;
-export const SEARCH_DEFAULT_MAX_DATA_BYTES = 1024 * 1024;
-export const SEARCH_DEFAULT_MAX_NODES = 50000;
+export const SEARCH_DEFAULT_MAX_DATA_BYTES = 0; // 0 = no size filter, results stay complete
+export const SEARCH_DEFAULT_MAX_NODES = 500000;
 
 function globToRegex(pattern: string): RegExp {
   let out = '^';
@@ -93,12 +100,21 @@ export async function searchNodes(client: ZkClient, options: SearchOptions): Pro
           truncated: false,
           visitedNodes: 1,
           maxNodes,
+          oversizedSkipped: 0,
+          cancelled: false,
         };
       }
     } catch {
       // invalid path (e.g. missing leading slash); falls through to empty
     }
-    return { results: [], truncated: false, visitedNodes: 0, maxNodes };
+    return {
+      results: [],
+      truncated: false,
+      visitedNodes: 0,
+      maxNodes,
+      oversizedSkipped: 0,
+      cancelled: false,
+    };
   }
 
   const matcher =
@@ -110,38 +126,79 @@ export async function searchNodes(client: ZkClient, options: SearchOptions): Pro
           ? (path: string) => new RegExp(options.query).test(path)
           : () => false;
 
-  const results: SearchResult[] = [];
-  let visited = 1;
-  let level: string[] = [root];
-  let truncated = false;
+  const walkOpts = {
+    concurrency,
+    maxItems: maxNodes,
+    isCancelled: options.isCancelled,
+  };
 
-  while (level.length > 0 && visited < maxNodes) {
-    const allowed = level.slice(0, maxNodes - visited);
-    if (allowed.length === 0) {
-      break;
-    }
-    if (allowed.length < level.length) {
-      // The budget ran out mid-level; the rest of this level (and its
-      // descendants) is skipped, so the outcome must be marked incomplete.
-      truncated = true;
-    }
-    const nextLevel: string[] = [];
-    const childLists = await mapLimit(allowed, concurrency, async (path) => {
-      const name = nameOf(path);
-      if (name !== '/') {
-        if (options.mode === 'content') {
+  if (options.mode === 'content') {
+    // Phase 1: walk with stat pre-checks. Nodes that are empty or too large
+    // are skipped without downloading their payload; oversized ones are
+    // counted so the UI can explain why results may be lighter.
+    const candidates: string[] = [];
+    let oversizedSkipped = 0;
+    const walkOutcome = await walkTree(
+      root,
+      async (path) => {
+        const name = nameOf(path);
+        if (name !== '/') {
           try {
             const stat = await client.getStat(path);
-            if (stat && stat.dataLength > 0 && stat.dataLength <= maxDataBytes) {
-              const { data } = await client.getData(path);
-              if (data.toString('utf8').includes(options.query)) {
-                results.push({ path, name, matchedBy: 'content' });
+            if (stat && stat.dataLength > 0) {
+              if (maxDataBytes > 0 && stat.dataLength > maxDataBytes) {
+                oversizedSkipped += 1;
+              } else {
+                candidates.push(path);
               }
             }
           } catch {
             // node disappeared or is unreadable; skip
           }
-        } else if (matcher(options.mode === 'prefix' ? name : path)) {
+        }
+        try {
+          return (await client.getChildren(path)).map((child) => childPath(path, child));
+        } catch {
+          return [];
+        }
+      },
+      walkOpts,
+    );
+    // Phase 2: download candidate payloads with a smaller concurrency window
+    // (data transfers are heavier than stat lookups).
+    const downloadConcurrency = Math.max(2, Math.min(8, Math.ceil(concurrency / 2)));
+    const hits = await mapLimit(candidates, downloadConcurrency, async (path) => {
+      const name = nameOf(path);
+      try {
+        const { data } = await client.getData(path);
+        if (data.toString('utf8').includes(options.query)) {
+          const hit: SearchResult = { path, name, matchedBy: 'content' };
+          return hit;
+        }
+      } catch {
+        // node disappeared between stat and data; skip
+      }
+      return undefined as SearchResult | undefined;
+    });
+    return {
+      results: hits
+        .filter((hit): hit is SearchResult => hit !== undefined)
+        .sort((a, b) => a.path.localeCompare(b.path)),
+      truncated: walkOutcome.truncated,
+      visitedNodes: walkOutcome.visited,
+      maxNodes,
+      oversizedSkipped,
+      cancelled: walkOutcome.cancelled,
+    };
+  }
+
+  const results: SearchResult[] = [];
+  const walkOutcome = await walkTree(
+    root,
+    async (path) => {
+      const name = nameOf(path);
+      if (name !== '/') {
+        if (matcher(options.mode === 'prefix' ? name : path)) {
           results.push({ path, name, matchedBy: 'name' });
         }
       }
@@ -150,21 +207,16 @@ export async function searchNodes(client: ZkClient, options: SearchOptions): Pro
       } catch {
         return [];
       }
-    });
-    for (const children of childLists) {
-      nextLevel.push(...children);
-    }
-    visited += allowed.length;
-    level = nextLevel;
-  }
-  if (visited >= maxNodes && level.length > 0) {
-    truncated = true;
-  }
+    },
+    walkOpts,
+  );
 
   return {
     results: results.sort((a, b) => a.path.localeCompare(b.path)),
-    truncated,
-    visitedNodes: visited,
+    truncated: walkOutcome.truncated,
+    visitedNodes: walkOutcome.visited,
     maxNodes,
+    oversizedSkipped: 0,
+    cancelled: walkOutcome.cancelled,
   };
 }

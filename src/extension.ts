@@ -13,13 +13,13 @@ import {
 import { SecretStorageWrapper, type SecretStorageLike } from './connections/secret-storage';
 import { deleteNodeRecursively, validateNodeName } from './commands/node-commands';
 import { log } from './log/activity-log';
-import { isSearchOptions, searchNodes, type SearchOptions } from './search/node-search';
+import { isSearchOptions, searchNodes, type SearchOptions, type SearchOutcome } from './search/node-search';
 import { resolvePath } from './search/path-resolver';
 import { NodeTreeProvider, revealPathInTree, type ZkNode } from './tree/node-tree-provider';
 import { NodeDetailPanel } from './webview/node-detail-panel';
 import { TREE_SORT_ORDERS, type TreeSortOrder } from './tree/node-tree';
 import { MockZkClient } from './zk/mock-zk';
-import { NodeZkClient, ZkError, ZkErrorCode } from './zk/zk-client';
+import { NodeZkClient, ZkError, ZkErrorCode, type ZkClient } from './zk/zk-client';
 
 let store: ConnectionStore;
 let manager: ConnectionManager;
@@ -302,17 +302,16 @@ async function gotoPathCommand(targetPath?: string): Promise<void> {
   }
 }
 
-async function promptSearchOptions(): Promise<SearchOptions | undefined> {
-  const modePick = await vscode.window.showQuickPick(
-    [
-      { label: 'Exact path (e.g. /app/config)', mode: 'exact' as const },
-      { label: 'Name prefix', mode: 'prefix' as const },
-      { label: 'Path wildcard (e.g. /app/*/config)', mode: 'wildcard' as const },
-      { label: 'Path regex (e.g. ^/svc-\\d+$)', mode: 'regex' as const },
-      { label: 'Content', mode: 'content' as const },
-    ],
-    { placeHolder: 'Search mode' },
-  );
+const SEARCH_MODES = [
+  { label: 'Exact path (e.g. /app/config)', mode: 'exact' as const },
+  { label: 'Name prefix', mode: 'prefix' as const },
+  { label: 'Path wildcard (e.g. /app/*/config)', mode: 'wildcard' as const },
+  { label: 'Path regex (e.g. ^/svc-\\d+$)', mode: 'regex' as const },
+  { label: 'Content', mode: 'content' as const },
+];
+
+async function promptSearchOptions(initialSubtree?: string): Promise<SearchOptions | undefined> {
+  const modePick = await vscode.window.showQuickPick(SEARCH_MODES, { placeHolder: 'Search mode' });
   if (!modePick) {
     return undefined;
   }
@@ -323,8 +322,8 @@ async function promptSearchOptions(): Promise<SearchOptions | undefined> {
   if (query === undefined || query.trim() === '') {
     return undefined;
   }
-  let subtree: string | undefined;
-  if (modePick.mode === 'content') {
+  let subtree = initialSubtree;
+  if (!subtree && modePick.mode === 'content') {
     const input = await vscode.window.showInputBox({
       title: 'Subtree root (optional, default /)',
       value: '/',
@@ -335,6 +334,74 @@ async function promptSearchOptions(): Promise<SearchOptions | undefined> {
     subtree = input.trim() || undefined;
   }
   return { mode: modePick.mode, query: query.trim(), subtree };
+}
+
+async function runSearch(
+  client: ZkClient,
+  opts: SearchOptions,
+  interactive: boolean,
+): Promise<SearchOutcome> {
+  const maxNodes = vscode.workspace.getConfiguration('zkViewer').get<number>('maxSearchNodes') ?? 500000;
+  const maxDataBytes = vscode.workspace.getConfiguration('zkViewer').get<number>('maxNodeDataBytes') ?? 0;
+  const doSearch = (token?: vscode.CancellationToken) =>
+    searchNodes(client, {
+      ...opts,
+      maxNodes,
+      maxDataBytes,
+      isCancelled: token ? () => token.isCancellationRequested : undefined,
+    });
+  let outcome: SearchOutcome;
+  if (interactive) {
+    outcome = (await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Searching "${opts.query}"${opts.subtree && opts.subtree !== '/' ? ` under ${opts.subtree}` : ''}...`,
+        cancellable: true,
+      },
+      (_progress, token) => doSearch(token),
+    )) as SearchOutcome;
+  } else {
+    outcome = await doSearch();
+  }
+  const { results } = outcome;
+  log(
+    `Search "${opts.query}" (${opts.mode}): ${results.length} results (visited ${outcome.visitedNodes})` +
+      (outcome.oversizedSkipped > 0 ? `, skipped ${outcome.oversizedSkipped} oversized` : ''),
+  );
+  if (interactive) {
+    if (outcome.cancelled) {
+      void vscode.window.showInformationMessage('Search cancelled.');
+      return outcome;
+    }
+    if (outcome.truncated) {
+      void vscode.window.showWarningMessage(
+        `搜索达到节点上限（${outcome.maxNodes} 个），结果可能不完整。请提高 zkViewer.maxSearchNodes 或使用右键子树搜索缩小范围。`,
+      );
+    }
+    if (outcome.oversizedSkipped > 0) {
+      void vscode.window.showWarningMessage(
+        `已跳过 ${outcome.oversizedSkipped} 个超大节点（超过 zkViewer.maxNodeDataBytes）。设为 0 可搜索全部节点。`,
+      );
+    }
+    if (results.length === 0) {
+      void vscode.window.showInformationMessage('No matching nodes.');
+      return outcome;
+    }
+    const picked = await vscode.window.showQuickPick(
+      results.map((result) => ({ label: result.path, description: result.matchedBy })),
+      { placeHolder: `Search results (${results.length} found)`, matchOnDescription: true },
+    );
+    if (picked) {
+      try {
+        await revealPathInTree(treeView, treeProvider, picked.label);
+      } catch (revealErr) {
+        const message = revealErr instanceof Error ? revealErr.message : String(revealErr);
+        log(`Reveal failed: ${message}`, 'error');
+        void vscode.window.showErrorMessage(message);
+      }
+    }
+  }
+  return outcome;
 }
 
 async function searchCommand(arg?: unknown): Promise<unknown> {
@@ -350,44 +417,28 @@ async function searchCommand(arg?: unknown): Promise<unknown> {
   if (!opts) {
     return;
   }
-  const maxNodes = vscode.workspace.getConfiguration('zkViewer').get<number>('maxSearchNodes') ?? 50000;
-  const maxDataBytes =
-    vscode.workspace.getConfiguration('zkViewer').get<number>('maxNodeDataBytes') ?? 1024 * 1024;
-  try {
-    const outcome = await searchNodes(client, { ...opts, maxNodes, maxDataBytes });
-    const { results } = outcome;
-    log(`Search "${opts.query}" (${opts.mode}): ${results.length} results (visited ${outcome.visitedNodes})`);
-    if (explicitOptions) {
-      return outcome;
-    }
-    if (outcome.truncated) {
-      void vscode.window.showWarningMessage(
-        `搜索达到节点上限（${outcome.maxNodes} 个），结果可能不完整。请提高 zkViewer.maxSearchNodes 或限定子树范围后重试。`,
-      );
-    }
-    if (results.length === 0) {
-      void vscode.window.showInformationMessage('No matching nodes.');
-      return;
-    }
-    const picked = await vscode.window.showQuickPick(
-      results.map((result) => ({ label: result.path, description: result.matchedBy })),
-      { placeHolder: `Search results (${results.length} found)`, matchOnDescription: true },
-    );
-    if (picked) {
-      try {
-        await revealPathInTree(treeView, treeProvider, picked.label);
-      } catch (revealErr) {
-        const message = revealErr instanceof Error ? revealErr.message : String(revealErr);
-        log(`Reveal failed: ${message}`, 'error');
-        void vscode.window.showErrorMessage(message);
-      }
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    log(`Search failed: ${message}`, 'error');
-    void vscode.window.showErrorMessage(message);
+  return runSearch(client, opts, !explicitOptions);
+}
+
+async function searchSubtreeCommand(node?: ZkNode, options?: SearchOptions): Promise<unknown> {
+  const client = manager.getClient();
+  if (!client) {
+    void vscode.window.showInformationMessage('Not connected.');
+    return;
   }
-  return;
+  const subtree = (node as ZkNode | undefined)?.descriptor?.path ?? treeView.selection[0]?.descriptor.path;
+  if (!subtree) {
+    return;
+  }
+  const explicitOptions = isSearchOptions(options) ? options : undefined;
+  const opts = explicitOptions
+    ? { ...explicitOptions, subtree: explicitOptions.subtree ?? subtree }
+    : await promptSearchOptions(subtree);
+  if (!opts) {
+    return;
+  }
+  log(`Subtree search under ${subtree}: "${opts.query}" (${opts.mode})`);
+  return runSearch(client, opts, !explicitOptions);
 }
 
 async function openNodeDetailCommand(node?: ZkNode): Promise<void> {
@@ -611,6 +662,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerCommand(context, 'zkViewer.copyPath', copyPathCommand);
   registerCommand(context, 'zkViewer.openNodeDetail', openNodeDetailCommand);
   registerCommand(context, 'zkViewer.setTreeSort', setTreeSortCommand);
+  registerCommand(context, 'zkViewer.searchSubtree', searchSubtreeCommand);
 
   log('zk-viewer-vscode activated');
 }

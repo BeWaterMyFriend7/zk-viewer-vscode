@@ -96,22 +96,31 @@ describe('searchNodes', () => {
     assert.strictEqual(outcome.truncated, false);
   });
 
-  it('skips empty and oversized nodes during content search', async () => {
+  it('skips oversized nodes only when a size limit is configured', async () => {
     const client = new MockZkClient();
     await client.connect();
     await client.create('/empty', Buffer.alloc(0), 'PERSISTENT');
     await client.create('/small', Buffer.from('target'), 'PERSISTENT');
-    await client.create('/huge', Buffer.alloc(1024), 'PERSISTENT');
+    await client.create('/huge', Buffer.from(`x${'target'.repeat(200)}`), 'PERSISTENT');
 
-    const { results: found } = await searchNodes(client, {
+    const limited = await searchNodes(client, {
       mode: 'content',
       query: 'target',
       maxDataBytes: 64,
     });
     assert.deepStrictEqual(
-      found.map((r) => r.path),
+      limited.results.map((r) => r.path),
       ['/small'],
     );
+    assert.strictEqual(limited.oversizedSkipped, 1);
+
+    const unlimited = await searchNodes(client, { mode: 'content', query: 'target' });
+    assert.deepStrictEqual(
+      unlimited.results.map((r) => r.path),
+      ['/huge', '/small'],
+      'default (no limit) must return matches from large nodes too',
+    );
+    assert.strictEqual(unlimited.oversizedSkipped, 0);
   });
 
   it('honors the concurrency window without losing results', async () => {
@@ -142,5 +151,41 @@ describe('searchNodes', () => {
     assert.strictEqual(outcome.results.length, 600, 'all matches must be returned');
     assert.strictEqual(outcome.truncated, false);
     assert.ok(outcome.visitedNodes > 600);
+  });
+
+  it('treats maxNodes 0 as unlimited', async () => {
+    const client = new MockZkClient();
+    await client.connect();
+    for (let i = 0; i < 30; i += 1) {
+      await client.create(`/n-${i}`, Buffer.alloc(0), 'PERSISTENT');
+    }
+    const outcome = await searchNodes(client, { mode: 'prefix', query: 'n-', maxNodes: 0 });
+    assert.strictEqual(outcome.results.length, 30);
+    assert.strictEqual(outcome.truncated, false);
+    assert.strictEqual(outcome.visitedNodes, 31);
+  });
+
+  it('reports cancellation', async () => {
+    const client = new MockZkClient();
+    await client.connect();
+    for (let i = 0; i < 20; i += 1) {
+      await client.create(`/n-${i}`, Buffer.alloc(0), 'PERSISTENT');
+    }
+    let cancelled = false;
+    const outcome = await searchNodes(client, {
+      mode: 'prefix',
+      query: 'n-',
+      isCancelled: () => cancelled,
+    });
+    assert.strictEqual(outcome.cancelled, false);
+
+    cancelled = true;
+    const cancelledOutcome = await searchNodes(client, {
+      mode: 'prefix',
+      query: 'n-',
+      isCancelled: () => cancelled,
+    });
+    assert.strictEqual(cancelledOutcome.cancelled, true);
+    assert.strictEqual(cancelledOutcome.results.length, 0);
   });
 });

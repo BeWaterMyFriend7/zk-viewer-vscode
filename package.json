@@ -31,7 +31,8 @@
     "onCommand:zkViewer.deleteNode",
     "onCommand:zkViewer.copyPath",
     "onCommand:zkViewer.openNodeDetail",
-    "onCommand:zkViewer.setTreeSort"
+    "onCommand:zkViewer.setTreeSort",
+    "onCommand:zkViewer.searchSubtree"
   ],
   "contributes": {
     "viewsContainers": {
@@ -128,6 +129,11 @@
         "title": "Sort Nodes...",
         "category": "ZooKeeper",
         "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "zkViewer.searchSubtree",
+        "title": "Search in this subtree...",
+        "category": "ZooKeeper"
       }
     ],
     "menus": {
@@ -203,6 +209,11 @@
           "command": "zkViewer.refresh",
           "when": "view == zkViewer.tree && viewItem == znode",
           "group": "zoo@5"
+        },
+        {
+          "command": "zkViewer.searchSubtree",
+          "when": "view == zkViewer.tree && viewItem == znode",
+          "group": "zoo@6"
         }
       ]
     },
@@ -226,13 +237,13 @@
         },
         "zkViewer.maxSearchNodes": {
           "type": "number",
-          "default": 50000,
-          "description": "Safety cap on the number of nodes visited during a single search. When the cap is reached the result list warns that it may be incomplete."
+          "default": 500000,
+          "description": "Safety cap on the number of nodes visited during a single search (0 = unlimited). When the cap is reached the result list warns that it may be incomplete."
         },
         "zkViewer.maxNodeDataBytes": {
           "type": "number",
-          "default": 1048576,
-          "description": "Maximum node data size loaded into the detail panel in bytes."
+          "default": 0,
+          "description": "Content search: skip nodes whose data exceeds this size in bytes (0 = no limit, complete results but slower)."
         },
         "zkViewer.treeSort": {
           "type": "string",
