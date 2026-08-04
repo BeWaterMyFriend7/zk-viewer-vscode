@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { ZkClient } from '../zk/zk-client';
 import { iconForType } from './node-model';
-import { listChildDescriptors, type ZkNodeDescriptor } from './node-tree';
+import { listChildDescriptors, type TreeSortOrder, type ZkNodeDescriptor } from './node-tree';
 
 export class ZkNode extends vscode.TreeItem {
   constructor(readonly descriptor: ZkNodeDescriptor) {
@@ -36,7 +36,8 @@ export class NodeTreeProvider implements vscode.TreeDataProvider<ZkNode> {
       return [];
     }
     try {
-      const descriptors = await listChildDescriptors(client, element.descriptor.path);
+      const sort = vscode.workspace.getConfiguration('zkViewer').get<TreeSortOrder>('treeSort') ?? 'name';
+      const descriptors = await listChildDescriptors(client, element.descriptor.path, sort);
       return descriptors.map((descriptor) => new ZkNode(descriptor));
     } catch {
       return [];

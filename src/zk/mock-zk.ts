@@ -145,7 +145,9 @@ export class MockZkClient implements ZkClient {
     this.requireConnected();
     this.childrenRequestLog.push(path);
     const node = this.requireNode(path);
-    return [...node.children.keys()].sort();
+    // ZooKeeper returns children in creation order; sorting is done by the
+    // tree layer, which keeps the mock faithful to the real server.
+    return [...node.children.keys()];
   }
 
   async getData(path: string): Promise<NodeData> {

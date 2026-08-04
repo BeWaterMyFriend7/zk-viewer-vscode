@@ -362,8 +362,10 @@ async function searchCommand(arg?: unknown): Promise<unknown> {
     return;
   }
   const maxNodes = vscode.workspace.getConfiguration('zkViewer').get<number>('maxSearchNodes') ?? 2000;
+  const maxDataBytes =
+    vscode.workspace.getConfiguration('zkViewer').get<number>('maxNodeDataBytes') ?? 1024 * 1024;
   try {
-    const results = await searchNodes(client, { ...opts, maxNodes });
+    const results = await searchNodes(client, { ...opts, maxNodes, maxDataBytes });
     log(`Search "${opts.query}" (${opts.mode}): ${results.length} results`);
     if (explicitOptions) {
       return results;

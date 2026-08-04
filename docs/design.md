@@ -79,7 +79,8 @@ test/unit|perf|integration/
 ### 3.2 节点树（tree/）
 
 - `NodeTreeProvider`（TreeDataProvider）：根节点为 `/`，子节点按需展开；
-- `listChildDescriptors`：仅请求当前层级的 `getChildren` + 逐个 `getStat` 识别类型，满足懒加载；
+- `listChildDescriptors`：仅请求当前层级的 `getChildren` + **并发** `getStat`（限流窗口 32）识别类型，满足懒加载，宽层级不再串行化；
+- `treeSort`：子节点按名称升序 / 降序 / 保持服务器顺序（配置 `zkViewer.treeSort`，默认按名称升序）；
 - `node-model`：由 `ephemeralOwner` 与顺序命名（`-\d{10}$`）推导四种节点类型，映射 Codicon。
 
 **活动栏图标规范：** SVG 必须为单色（`currentColor`）、无背景色块、无渐变，由 VS Code 主题着色，否则在新版 VS Code（尤其 Windows）中不渲染。
@@ -87,7 +88,8 @@ test/unit|perf|integration/
 ### 3.3 查询搜索（search/）
 
 - `path-resolver`：路径规范化（去重复斜杠 / 末尾斜杠）与存在性校验；
-- `node-search`：显式栈 DFS 遍历，支持前缀 / 通配符（`*`、`?`）/ 正则 / 内容四种模式，`maxNodes` 限制访问上限，结果按路径排序。
+- `node-search`：**层级并行**遍历（每层节点按并发窗口批量请求，默认 16），支持前缀 / 通配符（`*`、`?`）/ 正则 / 内容四种模式，`maxNodes` 限制访问上限，结果按路径排序；
+- 内容搜索先 `getStat` 预检：`dataLength == 0` 或超过 `maxDataBytes` 的节点直接跳过，避免下载空数据与超大节点。
 
 ### 3.4 详情面板（webview/）
 
@@ -122,6 +124,7 @@ test/unit|perf|integration/
 | D7 向下兼容 | `engines.vscode ^1.60`、`@types/vscode 1.60.0` 锁定、ES2021、显式 `activationEvents` | SecretStorage 门槛 1.57；类型面锁定防止误用新版 API；1.60 必须显式声明激活事件 |
 | D8 测试隔离 | 集成测试通过 `globalThis.__zkViewerTestApi` 获取测试句柄 | VS Code 1.60 的 `extension.exports` 不可靠 |
 | D9 图标规范 | 活动栏 SVG 单色 `currentColor`、无背景色块 | 遵循 VS Code 视图容器图标规范，保证深/浅主题均可见 |
+| D10 并发与排序 | 树与搜索请求按批次并发（树 32 / 搜索 16），子节点按名称排序可配置 | 串行网络往返是大数据量下卡顿主因；排序便于人工查找 |
 
 ---
 
@@ -158,7 +161,7 @@ test/unit|perf|integration/
 ### 7.1 测试分层
 
 - **单元测试**（Mocha + Mock，无网络）：连接状态机、配置/密钥往返、搜索匹配、JSON 分类、消息协议、递归删除顺序、TLS 连接串；
-- **性能测试**：500 子节点懒加载耗时 < 500ms，且只请求展开层级；
+- **性能测试**：500 子节点懒加载耗时 < 500ms，且只请求展开层级；500 节点内容搜索 < 2s；
 - **集成测试**（`@vscode/test-electron`，Mock 模式）：扩展激活、命令注册、菜单贡献、连接/树/搜索/面板/节点操作全流程。
 
 ### 7.2 质量门槛

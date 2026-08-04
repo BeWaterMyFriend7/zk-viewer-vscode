@@ -1,4 +1,5 @@
 import type { ZkClient } from '../zk/zk-client';
+import { mapLimit } from '../utils/async';
 
 export type SearchMode = 'prefix' | 'wildcard' | 'regex' | 'content';
 
@@ -7,6 +8,8 @@ export interface SearchOptions {
   query: string;
   subtree?: string;
   maxNodes?: number;
+  maxDataBytes?: number;
+  concurrency?: number;
 }
 
 export interface SearchResult {
@@ -14,6 +17,9 @@ export interface SearchResult {
   name: string;
   matchedBy: 'name' | 'content';
 }
+
+export const SEARCH_DEFAULT_CONCURRENCY = 16;
+export const SEARCH_DEFAULT_MAX_DATA_BYTES = 1024 * 1024;
 
 function globToRegex(pattern: string): RegExp {
   let out = '^';
@@ -40,9 +46,18 @@ function childPath(parent: string, name: string): string {
   return parent === '/' ? `/${name}` : `${parent}/${name}`;
 }
 
+/**
+ * Searches a znode tree with level-parallel traversal:
+ * - nodes on the same level are requested concurrently (bounded by
+ *   `concurrency`), so latency scales with depth, not node count;
+ * - name/path modes never read node data;
+ * - content mode pre-checks `stat.dataLength` and skips empty nodes and
+ *   nodes larger than `maxDataBytes` to avoid downloading big payloads.
+ */
 export async function searchNodes(client: ZkClient, options: SearchOptions): Promise<SearchResult[]> {
   const maxNodes = options.maxNodes ?? 2000;
-  const results: SearchResult[] = [];
+  const maxDataBytes = options.maxDataBytes ?? SEARCH_DEFAULT_MAX_DATA_BYTES;
+  const concurrency = Math.min(Math.max(options.concurrency ?? SEARCH_DEFAULT_CONCURRENCY, 1), 64);
   const root = options.subtree && options.subtree.trim() ? options.subtree.trim() : '/';
   const matcher =
     options.mode === 'prefix'
@@ -53,40 +68,46 @@ export async function searchNodes(client: ZkClient, options: SearchOptions): Pro
           ? (path: string) => new RegExp(options.query).test(path)
           : () => false;
 
-  const stack: string[] = [root];
-  const visited = new Set<string>();
+  const results: SearchResult[] = [];
+  let visited = 1;
+  let level: string[] = [root];
 
-  while (stack.length > 0 && visited.size < maxNodes) {
-    const path = stack.pop()!;
-    if (visited.has(path)) {
-      continue;
+  while (level.length > 0 && visited < maxNodes) {
+    const allowed = level.slice(0, maxNodes - visited);
+    if (allowed.length === 0) {
+      break;
     }
-    visited.add(path);
-    const name = nameOf(path);
-    if (name !== '/') {
-      if (options.mode === 'content') {
-        try {
-          const { data } = await client.getData(path);
-          if (data.toString('utf8').includes(options.query)) {
-            results.push({ path, name, matchedBy: 'content' });
+    const nextLevel: string[] = [];
+    const childLists = await mapLimit(allowed, concurrency, async (path) => {
+      const name = nameOf(path);
+      if (name !== '/') {
+        if (options.mode === 'content') {
+          try {
+            const stat = await client.getStat(path);
+            if (stat && stat.dataLength > 0 && stat.dataLength <= maxDataBytes) {
+              const { data } = await client.getData(path);
+              if (data.toString('utf8').includes(options.query)) {
+                results.push({ path, name, matchedBy: 'content' });
+              }
+            }
+          } catch {
+            // node disappeared or is unreadable; skip
           }
-        } catch {
-          // skip nodes that cannot be read
+        } else if (matcher(options.mode === 'prefix' ? name : path)) {
+          results.push({ path, name, matchedBy: 'name' });
         }
-      } else if (matcher(options.mode === 'prefix' ? name : path)) {
-        results.push({ path, name, matchedBy: 'name' });
       }
+      try {
+        return (await client.getChildren(path)).map((child) => childPath(path, child));
+      } catch {
+        return [];
+      }
+    });
+    for (const children of childLists) {
+      nextLevel.push(...children);
     }
-    let children: string[] = [];
-    try {
-      children = await client.getChildren(path);
-    } catch {
-      continue;
-    }
-    const paths = children.map((child) => childPath(path, child));
-    for (const child of [...paths].reverse()) {
-      stack.push(child);
-    }
+    visited += allowed.length;
+    level = nextLevel;
   }
 
   return results.sort((a, b) => a.path.localeCompare(b.path));

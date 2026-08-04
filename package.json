@@ -222,6 +222,12 @@
           "default": 1048576,
           "description": "Maximum node data size loaded into the detail panel in bytes."
         },
+        "zkViewer.treeSort": {
+          "type": "string",
+          "enum": ["name", "name-desc", "none"],
+          "default": "name",
+          "description": "Sort order for child nodes in the tree: by name ascending, descending, or keep the server order."
+        },
         "zkViewer.dev.useMockClient": {
           "type": "boolean",
           "default": false,

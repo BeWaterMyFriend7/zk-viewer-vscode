@@ -64,4 +64,30 @@ describe('searchNodes', () => {
     const client = await seedTree();
     assert.deepStrictEqual(await searchNodes(client, { mode: 'prefix', query: 'nope' }), []);
   });
+
+  it('skips empty and oversized nodes during content search', async () => {
+    const client = new MockZkClient();
+    await client.connect();
+    await client.create('/empty', Buffer.alloc(0), 'PERSISTENT');
+    await client.create('/small', Buffer.from('target'), 'PERSISTENT');
+    await client.create('/huge', Buffer.alloc(1024), 'PERSISTENT');
+
+    const found = await searchNodes(client, { mode: 'content', query: 'target', maxDataBytes: 64 });
+    assert.deepStrictEqual(
+      found.map((r) => r.path),
+      ['/small'],
+    );
+  });
+
+  it('honors the concurrency window without losing results', async () => {
+    const client = new MockZkClient();
+    await client.connect();
+    await client.create('/app', Buffer.alloc(0), 'PERSISTENT');
+    for (let i = 0; i < 50; i += 1) {
+      await client.create(`/app/n-${i}`, Buffer.alloc(0), 'PERSISTENT');
+    }
+    const serial = await searchNodes(client, { mode: 'prefix', query: 'n-', concurrency: 1 });
+    const parallel = await searchNodes(client, { mode: 'prefix', query: 'n-', concurrency: 8 });
+    assert.deepStrictEqual(parallel, serial, 'parallel traversal must match serial results');
+  });
 });
