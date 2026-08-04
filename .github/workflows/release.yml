@@ -40,7 +40,8 @@ jobs:
         run: npm run package
       - name: Verify VSIX contents
         run: |
-          tar -tf dist/zk-viewer-vscode.vsix | grep -E 'extension/package.json|out/src/extension.js|media/detail.js'
+          # VSIX 是 ZIP 格式，Ubuntu 的 GNU tar 无法读取，使用 unzip 校验。
+          unzip -l dist/zk-viewer-vscode.vsix | grep -E 'extension/package.json|extension/out/src/extension.js|extension/media/detail.js'
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v5
         with:
