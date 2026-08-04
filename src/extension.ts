@@ -349,14 +349,20 @@ async function searchCommand(arg?: unknown): Promise<unknown> {
   if (!opts) {
     return;
   }
-  const maxNodes = vscode.workspace.getConfiguration('zkViewer').get<number>('maxSearchNodes') ?? 2000;
+  const maxNodes = vscode.workspace.getConfiguration('zkViewer').get<number>('maxSearchNodes') ?? 50000;
   const maxDataBytes =
     vscode.workspace.getConfiguration('zkViewer').get<number>('maxNodeDataBytes') ?? 1024 * 1024;
   try {
-    const results = await searchNodes(client, { ...opts, maxNodes, maxDataBytes });
-    log(`Search "${opts.query}" (${opts.mode}): ${results.length} results`);
+    const outcome = await searchNodes(client, { ...opts, maxNodes, maxDataBytes });
+    const { results } = outcome;
+    log(`Search "${opts.query}" (${opts.mode}): ${results.length} results (visited ${outcome.visitedNodes})`);
     if (explicitOptions) {
-      return results;
+      return outcome;
+    }
+    if (outcome.truncated) {
+      void vscode.window.showWarningMessage(
+        `搜索达到节点上限（${outcome.maxNodes} 个），结果可能不完整。请提高 zkViewer.maxSearchNodes 或限定子树范围后重试。`,
+      );
     }
     if (results.length === 0) {
       void vscode.window.showInformationMessage('No matching nodes.');
@@ -364,7 +370,7 @@ async function searchCommand(arg?: unknown): Promise<unknown> {
     }
     const picked = await vscode.window.showQuickPick(
       results.map((result) => ({ label: result.path, description: result.matchedBy })),
-      { placeHolder: 'Search results', matchOnDescription: true },
+      { placeHolder: `Search results (${results.length} found)`, matchOnDescription: true },
     );
     if (picked) {
       try {

@@ -226,8 +226,8 @@
         },
         "zkViewer.maxSearchNodes": {
           "type": "number",
-          "default": 2000,
-          "description": "Maximum nodes visited during a single search."
+          "default": 50000,
+          "description": "Safety cap on the number of nodes visited during a single search. When the cap is reached the result list warns that it may be incomplete."
         },
         "zkViewer.maxNodeDataBytes": {
           "type": "number",

@@ -18,17 +18,18 @@ async function seedTree(): Promise<MockZkClient> {
 describe('searchNodes', () => {
   it('matches by name prefix', async () => {
     const client = await seedTree();
-    const results = await searchNodes(client, { mode: 'prefix', query: 'config' });
+    const { results } = await searchNodes(client, { mode: 'prefix', query: 'config' });
     assert.deepStrictEqual(
       results.map((r) => r.path),
       ['/app/config', '/app/x/config'],
     );
     assert.ok(results.every((r) => r.matchedBy === 'name'));
+    assert.strictEqual(results.length, 2);
   });
 
   it('matches path wildcards', async () => {
     const client = await seedTree();
-    const results = await searchNodes(client, { mode: 'wildcard', query: '/app/*/config' });
+    const { results } = await searchNodes(client, { mode: 'wildcard', query: '/app/*/config' });
     assert.deepStrictEqual(
       results.map((r) => r.path),
       ['/app/x/config'],
@@ -37,7 +38,7 @@ describe('searchNodes', () => {
 
   it('matches path regexes', async () => {
     const client = await seedTree();
-    const results = await searchNodes(client, { mode: 'regex', query: '^/svc-\\d+$' });
+    const { results } = await searchNodes(client, { mode: 'regex', query: '^/svc-\\d+$' });
     assert.deepStrictEqual(
       results.map((r) => r.path),
       ['/svc-1', '/svc-2'],
@@ -46,7 +47,7 @@ describe('searchNodes', () => {
 
   it('matches node content within a subtree', async () => {
     const client = await seedTree();
-    const results = await searchNodes(client, { mode: 'content', query: 'role', subtree: '/app' });
+    const { results } = await searchNodes(client, { mode: 'content', query: 'role', subtree: '/app' });
     assert.deepStrictEqual(
       results.map((r) => r.path),
       ['/app/config'],
@@ -54,15 +55,19 @@ describe('searchNodes', () => {
     assert.strictEqual(results[0].matchedBy, 'content');
   });
 
-  it('honors the maxNodes traversal bound', async () => {
+  it('marks the outcome truncated when the traversal hits the cap', async () => {
     const client = await seedTree();
-    const results = await searchNodes(client, { mode: 'regex', query: '^/svc-\\d+$', maxNodes: 2 });
-    assert.ok(results.length <= 2);
+    const outcome = await searchNodes(client, { mode: 'regex', query: '^/svc-\\d+$', maxNodes: 2 });
+    assert.ok(outcome.results.length <= 2);
+    assert.strictEqual(outcome.truncated, true, 'small cap must mark the search as truncated');
+    assert.strictEqual(outcome.visitedNodes, 2);
   });
 
   it('returns no results when nothing matches', async () => {
     const client = await seedTree();
-    assert.deepStrictEqual(await searchNodes(client, { mode: 'prefix', query: 'nope' }), []);
+    const outcome = await searchNodes(client, { mode: 'prefix', query: 'nope' });
+    assert.deepStrictEqual(outcome.results, []);
+    assert.strictEqual(outcome.truncated, false);
   });
 
   it('skips empty and oversized nodes during content search', async () => {
@@ -72,7 +77,11 @@ describe('searchNodes', () => {
     await client.create('/small', Buffer.from('target'), 'PERSISTENT');
     await client.create('/huge', Buffer.alloc(1024), 'PERSISTENT');
 
-    const found = await searchNodes(client, { mode: 'content', query: 'target', maxDataBytes: 64 });
+    const { results: found } = await searchNodes(client, {
+      mode: 'content',
+      query: 'target',
+      maxDataBytes: 64,
+    });
     assert.deepStrictEqual(
       found.map((r) => r.path),
       ['/small'],
@@ -88,6 +97,24 @@ describe('searchNodes', () => {
     }
     const serial = await searchNodes(client, { mode: 'prefix', query: 'n-', concurrency: 1 });
     const parallel = await searchNodes(client, { mode: 'prefix', query: 'n-', concurrency: 8 });
-    assert.deepStrictEqual(parallel, serial, 'parallel traversal must match serial results');
+    assert.deepStrictEqual(parallel.results, serial.results, 'parallel traversal must match serial results');
+    assert.strictEqual(parallel.truncated, false);
+  });
+
+  it('returns every match in a wide tree with a sufficient cap', async () => {
+    const client = new MockZkClient();
+    await client.connect();
+    // 60 directories, each containing 10 matching config nodes: 600 matches
+    // spread across two levels - a cap of 2000 would have dropped most of them.
+    for (let i = 0; i < 60; i += 1) {
+      await client.create(`/svc-${i}`, Buffer.alloc(0), 'PERSISTENT');
+      for (let j = 0; j < 10; j += 1) {
+        await client.create(`/svc-${i}/config-${j}`, Buffer.alloc(0), 'PERSISTENT');
+      }
+    }
+    const outcome = await searchNodes(client, { mode: 'prefix', query: 'config-' });
+    assert.strictEqual(outcome.results.length, 600, 'all matches must be returned');
+    assert.strictEqual(outcome.truncated, false);
+    assert.ok(outcome.visitedNodes > 600);
   });
 });

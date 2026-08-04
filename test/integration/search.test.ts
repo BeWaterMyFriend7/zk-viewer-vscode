@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import type * as ext from '../../src/extension';
-import { isSearchOptions, type SearchResult } from '../../src/search/node-search';
+import { isSearchOptions, type SearchOutcome } from '../../src/search/node-search';
 
 suite('Search and navigation (mock)', () => {
   let api: ReturnType<typeof ext.getTestApi>;
@@ -26,14 +26,15 @@ suite('Search and navigation (mock)', () => {
     await mock.create('/app/config', Buffer.from('{"role":"web"}'), 'PERSISTENT');
     await mock.create('/svc-1', Buffer.alloc(0), 'PERSISTENT');
 
-    const results = (await vscode.commands.executeCommand('zkViewer.search', {
+    const outcome = (await vscode.commands.executeCommand('zkViewer.search', {
       mode: 'prefix',
       query: 'config',
-    })) as SearchResult[];
+    })) as SearchOutcome;
     assert.deepStrictEqual(
-      results.map((r) => r.path),
+      outcome.results.map((r) => r.path),
       ['/app/config'],
     );
+    assert.strictEqual(outcome.truncated, false);
 
     await vscode.commands.executeCommand('zkViewer.gotoPath', '/app/config');
     assert.strictEqual(

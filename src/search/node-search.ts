@@ -18,6 +18,14 @@ export interface SearchResult {
   matchedBy: 'name' | 'content';
 }
 
+export interface SearchOutcome {
+  results: SearchResult[];
+  /** True when the traversal hit maxNodes and results may be incomplete. */
+  truncated: boolean;
+  visitedNodes: number;
+  maxNodes: number;
+}
+
 /**
  * Guards command arguments: VS Code passes the TreeView as the first argument
  * to view/title commands, which must not be mistaken for explicit options.
@@ -32,6 +40,7 @@ export function isSearchOptions(value: unknown): value is SearchOptions {
 
 export const SEARCH_DEFAULT_CONCURRENCY = 16;
 export const SEARCH_DEFAULT_MAX_DATA_BYTES = 1024 * 1024;
+export const SEARCH_DEFAULT_MAX_NODES = 50000;
 
 function globToRegex(pattern: string): RegExp {
   let out = '^';
@@ -66,8 +75,8 @@ function childPath(parent: string, name: string): string {
  * - content mode pre-checks `stat.dataLength` and skips empty nodes and
  *   nodes larger than `maxDataBytes` to avoid downloading big payloads.
  */
-export async function searchNodes(client: ZkClient, options: SearchOptions): Promise<SearchResult[]> {
-  const maxNodes = options.maxNodes ?? 2000;
+export async function searchNodes(client: ZkClient, options: SearchOptions): Promise<SearchOutcome> {
+  const maxNodes = options.maxNodes ?? SEARCH_DEFAULT_MAX_NODES;
   const maxDataBytes = options.maxDataBytes ?? SEARCH_DEFAULT_MAX_DATA_BYTES;
   const concurrency = Math.min(Math.max(options.concurrency ?? SEARCH_DEFAULT_CONCURRENCY, 1), 64);
   const root = options.subtree && options.subtree.trim() ? options.subtree.trim() : '/';
@@ -83,11 +92,17 @@ export async function searchNodes(client: ZkClient, options: SearchOptions): Pro
   const results: SearchResult[] = [];
   let visited = 1;
   let level: string[] = [root];
+  let truncated = false;
 
   while (level.length > 0 && visited < maxNodes) {
     const allowed = level.slice(0, maxNodes - visited);
     if (allowed.length === 0) {
       break;
+    }
+    if (allowed.length < level.length) {
+      // The budget ran out mid-level; the rest of this level (and its
+      // descendants) is skipped, so the outcome must be marked incomplete.
+      truncated = true;
     }
     const nextLevel: string[] = [];
     const childLists = await mapLimit(allowed, concurrency, async (path) => {
@@ -121,6 +136,14 @@ export async function searchNodes(client: ZkClient, options: SearchOptions): Pro
     visited += allowed.length;
     level = nextLevel;
   }
+  if (visited >= maxNodes && level.length > 0) {
+    truncated = true;
+  }
 
-  return results.sort((a, b) => a.path.localeCompare(b.path));
+  return {
+    results: results.sort((a, b) => a.path.localeCompare(b.path)),
+    truncated,
+    visitedNodes: visited,
+    maxNodes,
+  };
 }

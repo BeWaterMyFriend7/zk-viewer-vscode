@@ -93,7 +93,7 @@ ZK_VIEWER_USE_MOCK=1 code .        # PowerShell: $env:ZK_VIEWER_USE_MOCK="1"; co
 | 路径正则 | 正则表达式匹配完整路径 | `^/svc-\d+$` |
 | 内容 | 节点数据包含关键字（可限定子树） | `role` |
 
-搜索结果按路径排序展示，点击结果后树视图自动展开并定位到对应节点。内容搜索自动跳过空数据与超大节点，单次搜索最多遍历 `zkViewer.maxSearchNodes` 个节点，超大节点阈值由 `zkViewer.maxNodeDataBytes` 控制。
+搜索结果按路径排序展示，点击结果后树视图自动展开并定位到对应节点。内容搜索自动跳过空数据与超大节点，超大节点阈值由 `zkViewer.maxNodeDataBytes` 控制。搜索默认最多遍历 50000 个节点（`zkViewer.maxSearchNodes`）；若达到上限，界面会提示结果可能不完整，可提高上限或限定子树范围后重试。
 
 **路径定位**
 

@@ -42,10 +42,11 @@ describe('lazy loading performance', () => {
     }
 
     const start = Date.now();
-    const results = await searchNodes(client, { mode: 'content', query: 'needle' });
+    const outcome = await searchNodes(client, { mode: 'content', query: 'needle' });
     const elapsed = Date.now() - start;
 
-    assert.strictEqual(results.length, 500);
+    assert.strictEqual(outcome.results.length, 500);
+    assert.strictEqual(outcome.truncated, false);
     assert.ok(elapsed < 2000, `content search over 500 nodes took ${elapsed}ms`);
   });
 });
