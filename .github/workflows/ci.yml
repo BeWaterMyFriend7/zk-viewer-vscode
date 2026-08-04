@@ -3,20 +3,27 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
 
+# GITHUB_TOKEN 在 PR 上自动降级为只读；仅 tag 推送时用于发布 Release。
+permissions:
+  contents: write
+
 jobs:
-  build:
+  test:
+    name: Test (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run compile
@@ -24,9 +31,59 @@ jobs:
       - run: npm run format:check
       - run: npm run test:unit
       - run: npm run test:perf
-      - name: Integration tests (Linux, headless)
-        if: runner.os == 'Linux'
+
+  integration:
+    name: Integration tests (Linux, headless)
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Cache VS Code test download
+        uses: actions/cache@v4
+        with:
+          # Cache only the VS Code binary directory (not user-data, which
+          # carries per-run lock files that can break the next run).
+          path: .vscode-test/vscode-*
+          key: ${{ runner.os }}-vscode-test-1.60.0
+      - name: Integration tests (headless)
         run: xvfb-run -a npm run test:integration
-      - name: Integration tests (Windows / macOS)
-        if: runner.os != 'Linux'
-        run: npm run test:integration
+
+  package:
+    name: Package VSIX
+    needs: [test, integration]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build VSIX
+        run: npm run package
+      - name: Verify VSIX contents
+        run: |
+          tar -tf dist/zk-viewer-vscode.vsix | grep -E 'extension/package.json|out/src/extension.js|media/detail.js'
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: zk-viewer-vscode-vsix
+          path: dist/zk-viewer-vscode.vsix
+          if-no-files-found: error
+      - name: Publish GitHub Release (tag only)
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Create the release if this tag is new; otherwise (re-push) upload
+          # the artifact to the existing release.
+          gh release create "$GITHUB_REF_NAME" dist/zk-viewer-vscode.vsix \
+            --title "zk-viewer-vscode $GITHUB_REF_NAME" --generate-notes \
+          || gh release upload "$GITHUB_REF_NAME" dist/zk-viewer-vscode.vsix --clobber

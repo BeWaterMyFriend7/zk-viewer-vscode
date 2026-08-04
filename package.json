@@ -271,6 +271,7 @@
     "test:perf": "npm run compile && mocha \"out/test/perf/**/*.test.js\" --timeout 30000",
     "test:integration": "npm run compile && node scripts/run-integration-tests.js",
     "vscode:prepublish": "npm run compile",
+    "prepackage": "node -e \"require('fs').mkdirSync('dist',{recursive:true})\"",
     "package": "vsce package --out dist/zk-viewer-vscode.vsix"
   },
   "dependencies": {

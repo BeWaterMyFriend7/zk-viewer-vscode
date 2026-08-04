@@ -5,6 +5,7 @@ dist/
 .vscode-test/
 .inttest*.log
 .stale-dist-file
+.dist-backup/
 .tmp-ext-install/
 *.log
 coverage/
