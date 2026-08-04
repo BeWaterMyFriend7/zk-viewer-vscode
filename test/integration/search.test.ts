@@ -53,4 +53,26 @@ suite('Search and navigation (mock)', () => {
     assert.strictEqual(isSearchOptions(api.treeView), false, 'TreeView must not look like SearchOptions');
     assert.strictEqual(isSearchOptions({ mode: 'prefix', query: 'config' }), true);
   });
+
+  test('exact path search locates and reveals the target node', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/app', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/app/config', Buffer.from('{"role":"web"}'), 'PERSISTENT');
+
+    const outcome = (await vscode.commands.executeCommand('zkViewer.search', {
+      mode: 'exact',
+      query: '/app/config',
+    })) as SearchOutcome;
+    assert.deepStrictEqual(
+      outcome.results.map((r) => r.path),
+      ['/app/config'],
+    );
+    assert.strictEqual(outcome.truncated, false);
+
+    await vscode.commands.executeCommand('zkViewer.disconnect');
+  });
 });

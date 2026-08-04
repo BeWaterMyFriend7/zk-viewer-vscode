@@ -16,6 +16,32 @@ async function seedTree(): Promise<MockZkClient> {
 }
 
 describe('searchNodes', () => {
+  it('locates a node by its exact path', async () => {
+    const client = await seedTree();
+    const outcome = await searchNodes(client, { mode: 'exact', query: '/app/config' });
+    assert.deepStrictEqual(
+      outcome.results.map((r) => r.path),
+      ['/app/config'],
+    );
+    assert.strictEqual(outcome.truncated, false);
+  });
+
+  it('normalizes trailing slashes for exact path lookup', async () => {
+    const client = await seedTree();
+    const outcome = await searchNodes(client, { mode: 'exact', query: '/app/config/' });
+    assert.deepStrictEqual(
+      outcome.results.map((r) => r.path),
+      ['/app/config'],
+    );
+  });
+
+  it('returns no results for an exact path that does not exist', async () => {
+    const client = await seedTree();
+    const outcome = await searchNodes(client, { mode: 'exact', query: '/missing/node' });
+    assert.deepStrictEqual(outcome.results, []);
+    assert.strictEqual(outcome.truncated, false);
+  });
+
   it('matches by name prefix', async () => {
     const client = await seedTree();
     const { results } = await searchNodes(client, { mode: 'prefix', query: 'config' });

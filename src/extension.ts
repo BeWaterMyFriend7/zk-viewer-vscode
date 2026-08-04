@@ -305,6 +305,7 @@ async function gotoPathCommand(targetPath?: string): Promise<void> {
 async function promptSearchOptions(): Promise<SearchOptions | undefined> {
   const modePick = await vscode.window.showQuickPick(
     [
+      { label: 'Exact path (e.g. /app/config)', mode: 'exact' as const },
       { label: 'Name prefix', mode: 'prefix' as const },
       { label: 'Path wildcard (e.g. /app/*/config)', mode: 'wildcard' as const },
       { label: 'Path regex (e.g. ^/svc-\\d+$)', mode: 'regex' as const },

@@ -1,7 +1,8 @@
 import type { ZkClient } from '../zk/zk-client';
 import { mapLimit } from '../utils/async';
+import { normalizePath } from './path-resolver';
 
-export type SearchMode = 'prefix' | 'wildcard' | 'regex' | 'content';
+export type SearchMode = 'exact' | 'prefix' | 'wildcard' | 'regex' | 'content';
 
 export interface SearchOptions {
   mode: SearchMode;
@@ -80,6 +81,26 @@ export async function searchNodes(client: ZkClient, options: SearchOptions): Pro
   const maxDataBytes = options.maxDataBytes ?? SEARCH_DEFAULT_MAX_DATA_BYTES;
   const concurrency = Math.min(Math.max(options.concurrency ?? SEARCH_DEFAULT_CONCURRENCY, 1), 64);
   const root = options.subtree && options.subtree.trim() ? options.subtree.trim() : '/';
+
+  // Exact path mode is a direct lookup: normalize the input, check existence
+  // and return at most one result without traversing the tree.
+  if (options.mode === 'exact') {
+    try {
+      const target = normalizePath(options.query);
+      if (await client.exists(target)) {
+        return {
+          results: [{ path: target, name: nameOf(target), matchedBy: 'name' }],
+          truncated: false,
+          visitedNodes: 1,
+          maxNodes,
+        };
+      }
+    } catch {
+      // invalid path (e.g. missing leading slash); falls through to empty
+    }
+    return { results: [], truncated: false, visitedNodes: 0, maxNodes };
+  }
+
   const matcher =
     options.mode === 'prefix'
       ? (name: string) => name.startsWith(options.query)

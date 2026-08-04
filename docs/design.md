@@ -88,7 +88,7 @@ test/unit|perf|integration/
 ### 3.3 查询搜索（search/）
 
 - `path-resolver`：路径规范化（去重复斜杠 / 末尾斜杠）与存在性校验；
-- `node-search`：**层级并行**遍历（每层节点按并发窗口批量请求，默认 16），支持前缀 / 通配符（`*`、`?`）/ 正则 / 内容四种模式，`maxNodes` 限制访问上限，结果按路径排序；
+- `node-search`：**层级并行**遍历（每层节点按并发窗口批量请求，默认 16），支持精确路径 / 前缀 / 通配符（`*`、`?`）/ 正则 / 内容五种模式，`maxNodes` 限制访问上限，结果按路径排序；精确路径模式为直接查找（规范化路径 + `exists`），不遍历全树；
 - 内容搜索先 `getStat` 预检：`dataLength == 0` 或超过 `maxDataBytes` 的节点直接跳过，避免下载空数据与超大节点。
 - `SearchOutcome`：搜索返回 `{ results, truncated, visitedNodes, maxNodes }`；`truncated` 标记遍历是否触及上限（结果可能不完整），界面据此提示用户。
 
