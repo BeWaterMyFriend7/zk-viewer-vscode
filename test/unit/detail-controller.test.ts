@@ -20,6 +20,9 @@ describe('DetailPanelController', () => {
   let view: CapturingView;
   let controller: DetailPanelController;
   let deps: DetailPanelDeps;
+  let notifyErrors: Array<{ message: string; code?: string }>;
+  let deletedPaths: string[];
+  let watchCount: number;
 
   beforeEach(async () => {
     client = new MockZkClient();
@@ -27,9 +30,19 @@ describe('DetailPanelController', () => {
     await client.create('/app', Buffer.alloc(0), 'PERSISTENT');
     await client.create('/app/config', Buffer.from('{"role":"web"}'), 'PERSISTENT');
     view = new CapturingView();
+    notifyErrors = [];
+    deletedPaths = [];
+    watchCount = 0;
     deps = {
       getNodeData: (path) => client.getData(path),
       saveNodeData: (path, data, version) => client.setData(path, data, version),
+      nodeExists: (path) => client.exists(path),
+      watchNode: async (path, onEvent) => {
+        watchCount += 1;
+        await client.watchData(path, onEvent);
+      },
+      notifyError: (message, code) => notifyErrors.push({ message, code }),
+      onNodeDeleted: (path) => deletedPaths.push(path),
     };
     controller = new DetailPanelController(deps, view);
   });
@@ -92,6 +105,95 @@ describe('DetailPanelController', () => {
     assert.ok(error, 'an error message should be posted');
     assert.strictEqual(error?.code, ZkErrorCode.BAD_VERSION);
     assert.strictEqual((await client.getData('/app/config')).data.toString('utf8'), '{"changed":true}');
+    assert.ok(
+      notifyErrors.some(
+        (entry) => entry.code === ZkErrorCode.BAD_VERSION && entry.message.includes('版本已变化'),
+      ),
+      'a version conflict should produce a notification',
+    );
+  });
+
+  it('detects node deletion while the panel is open and blocks further saves', async () => {
+    await controller.load('/app/config');
+    await client.remove('/app/config');
+
+    const error = view.messages.find((m) => (m as { type: string }).type === 'error') as
+      { message: string; code?: string } | undefined;
+    assert.ok(error, 'an error should be posted when the node is deleted');
+    assert.strictEqual(error?.code, ZkErrorCode.NO_NODE);
+    assert.deepStrictEqual(deletedPaths, ['/app/config']);
+    assert.ok(notifyErrors.some((entry) => entry.code === ZkErrorCode.NO_NODE));
+
+    await controller.handleMessage({ type: 'save', path: '/app/config', text: '{}', version: 0 });
+    const blocked = [...view.messages].reverse().find((m) => (m as { type: string }).type === 'error') as
+      { message: string } | undefined;
+    assert.match(blocked?.message ?? '', /not been loaded/);
+  });
+
+  it('rejects save for a deleted node before writing', async () => {
+    let setDataCalls = 0;
+    const noWatch: DetailPanelDeps = {
+      ...deps,
+      watchNode: undefined,
+      saveNodeData: (path, data, version) => {
+        setDataCalls += 1;
+        return client.setData(path, data, version);
+      },
+    };
+    const local = new DetailPanelController(noWatch, view);
+    const loaded = await local.load('/app/config');
+    await client.remove('/app/config');
+
+    await local.handleMessage({
+      type: 'save',
+      path: '/app/config',
+      text: '{}',
+      version: loaded.stat.version,
+    });
+
+    assert.strictEqual(setDataCalls, 0, 'the existence check should prevent the write');
+    const error = view.messages.find((m) => (m as { type: string }).type === 'error') as
+      { message: string; code?: string } | undefined;
+    assert.strictEqual(error?.code, ZkErrorCode.NO_NODE);
+    assert.ok(
+      notifyErrors.some(
+        (entry) => entry.code === ZkErrorCode.NO_NODE && entry.message.includes('节点已被删除'),
+      ),
+    );
+  });
+
+  it('notifies with a friendly message when save hits a deleted-node race', async () => {
+    const racy: DetailPanelDeps = {
+      ...deps,
+      watchNode: undefined,
+      nodeExists: async () => true,
+    };
+    const local = new DetailPanelController(racy, view);
+    const loaded = await local.load('/app/config');
+    await client.remove('/app/config');
+
+    await local.handleMessage({
+      type: 'save',
+      path: '/app/config',
+      text: '{}',
+      version: loaded.stat.version,
+    });
+
+    assert.ok(
+      notifyErrors.some(
+        (entry) => entry.code === ZkErrorCode.NO_NODE && entry.message.includes('节点已被删除'),
+      ),
+    );
+  });
+
+  it('keeps watching for deletion after unrelated data changes', async () => {
+    await controller.load('/app/config');
+    const watchesBefore = watchCount;
+    await client.setData('/app/config', Buffer.from('{"role":"web2"}'), 0);
+    assert.ok(watchCount > watchesBefore, 'the watch should be re-armed after a change event');
+
+    await client.remove('/app/config');
+    assert.deepStrictEqual(deletedPaths, ['/app/config']);
   });
 
   it('rejects saves before load and incomplete messages', async () => {

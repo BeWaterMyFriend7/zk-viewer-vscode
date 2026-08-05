@@ -97,8 +97,8 @@ test/unit|perf|integration/
 ### 3.4 详情面板（webview/）
 
 - `json-utils`：数据分类（JSON / 文本 / 二进制含 `\0`），JSON 二空格格式化，二进制十六进制视图；
-- `DetailPanelController`：vscode 无关的消息协议，`loadData → save → saved/error`，保存携带 `stat.version` 乐观锁，`BadVersion` 冲突不覆盖并返回错误；
-- `NodeDetailPanel`：Webview 面板（CSP nonce + localResourceRoots），与控制器桥接；**默认只读**，必须点击「Edit」按钮才进入编辑模式（防误触），二进制数据始终只读。
+- `DetailPanelController`：vscode 无关的消息协议，`loadData → save → saved/error`，保存携带 `stat.version` 乐观锁，`BadVersion` 冲突不覆盖并返回错误；保存前经 `nodeExists` 预检，删除 / 冲突错误通过 `notifyError` 弹出 VS Code 通知；打开节点时注册一次性数据 watch（`watchNode`），收到删除事件即报错并回调 `onNodeDeleted` 关闭面板，其他事件后自动重新武装以持续监测；
+- `NodeDetailPanel`：Webview 面板（CSP nonce + localResourceRoots），与控制器桥接；**默认只读**，必须点击「Edit」按钮才进入编辑模式（防误触），二进制数据始终只读；面板销毁时调用 `controller.dispose()` 停止响应陈旧 watch 事件。
 
 ### 3.5 节点操作（commands/）
 
@@ -108,9 +108,9 @@ test/unit|perf|integration/
 
 ### 3.6 客户端封装（zk/）
 
-- `ZkClient` 接口：`connect / close / getChildren / getData / getStat / create / setData / remove / exists / onStateChange`；
+- `ZkClient` 接口：`connect / close / getChildren / getData / getStat / watchData / create / setData / remove / exists / onStateChange`；`watchData` 为一次性数据 watch（节点被修改或删除时触发），由调用方决定是否重新注册；
 - `NodeZkClient`：懒加载原生模块（`require` 延迟到真实连接），错误码映射为 `ZkError`（`NO_NODE / NODE_EXISTS / NOT_EMPTY / BAD_VERSION / NO_AUTH`）；
-- `MockZkClient`：内存 znode 树，含请求日志（`childrenRequestLog`、`removalLog`）供测试断言，实现完整的四种创建模式与乐观锁语义。
+- `MockZkClient`：内存 znode 树，含请求日志（`childrenRequestLog`、`removalLog`）供测试断言，实现完整的四种创建模式、乐观锁语义与一次性数据 watch（`setData` 触发 `changed`、`remove` 触发 `deleted`）。
 
 ---
 

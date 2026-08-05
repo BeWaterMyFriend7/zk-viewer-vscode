@@ -5,6 +5,8 @@ import {
   type NodeData,
   type ZkClient,
   type ZkConnectionState,
+  type ZkWatchEvent,
+  type ZkWatchEventType,
   type ZnodeStat,
 } from './zk-client';
 
@@ -71,6 +73,7 @@ export class MockZkClient implements ZkClient {
   closeCalls = 0;
   readonly childrenRequestLog: string[] = [];
   readonly removalLog: string[] = [];
+  private readonly dataWatchers = new Map<string, (event: ZkWatchEvent) => void>();
 
   constructor(private readonly opts: MockZkClientOptions = {}) {
     this.baseTime = Date.now();
@@ -122,6 +125,7 @@ export class MockZkClient implements ZkClient {
 
   clear(): void {
     this.nodes.clear();
+    this.dataWatchers.clear();
     this.nodes.set('/', {
       data: Buffer.alloc(0),
       stat: statForNode(Buffer.alloc(0), '0x0', 0, this.timeSource()),
@@ -159,6 +163,22 @@ export class MockZkClient implements ZkClient {
     const node = this.requireNode(path);
     const stat: ZnodeStat = { ...node.stat, dataLength: node.data.length };
     return { data: Buffer.from(node.data), stat };
+  }
+
+  async watchData(path: string, onEvent: (event: ZkWatchEvent) => void): Promise<void> {
+    this.requireConnected();
+    this.requireNode(path);
+    this.dataWatchers.set(path, onEvent);
+  }
+
+  private fireDataEvent(path: string, type: ZkWatchEventType): void {
+    const watcher = this.dataWatchers.get(path);
+    if (!watcher) {
+      return;
+    }
+    // ZooKeeper data watches are one-shot: firing consumes the registration.
+    this.dataWatchers.delete(path);
+    watcher({ type, path });
   }
 
   async getStat(path: string): Promise<ZnodeStat | undefined> {
@@ -200,6 +220,7 @@ export class MockZkClient implements ZkClient {
     parentNode.stat.numChildren += 1;
     parentNode.stat.cversion += 1;
     this.nodes.set(finalPath, parentNode.children.get(finalName)!);
+    this.fireDataEvent(finalPath, 'created');
     return finalPath;
   }
 
@@ -213,6 +234,7 @@ export class MockZkClient implements ZkClient {
     node.stat.version += 1;
     node.stat.mtime = this.timeSource();
     node.stat.dataLength = data.length;
+    this.fireDataEvent(path, 'changed');
   }
 
   async remove(path: string, version?: number): Promise<void> {
@@ -234,6 +256,7 @@ export class MockZkClient implements ZkClient {
     parentNode.stat.cversion += 1;
     this.nodes.delete(path);
     this.removalLog.push(path);
+    this.fireDataEvent(path, 'deleted');
   }
 
   async exists(path: string): Promise<boolean> {

@@ -460,7 +460,9 @@ async function openNodeDetailCommand(node?: ZkNode): Promise<void> {
   }
   try {
     const resolved = await resolvePath(client, path);
-    await NodeDetailPanel.open(extensionContext, client, resolved);
+    await NodeDetailPanel.open(extensionContext, client, resolved, {
+      onNodeDeleted: () => treeProvider.refresh(),
+    });
     log(`Opened detail panel for ${resolved}`);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

@@ -44,15 +44,18 @@
       currentVersion = message.stat.version;
       dataEditable = message.editable;
       dataInput.value = message.dataText;
+      status.classList.remove('error');
       editButton.disabled = !message.editable;
       setEditing(false);
       renderStat(message.stat);
       status.textContent = message.editable ? 'Read-only — click Edit to modify' : message.kind + ' (read-only)';
     } else if (message.type === 'saved') {
       status.textContent = 'Saved at version ' + currentVersion;
+      status.classList.remove('error');
       setEditing(false);
     } else if (message.type === 'error') {
       status.textContent = 'Error: ' + message.message;
+      status.classList.add('error');
     }
   });
 

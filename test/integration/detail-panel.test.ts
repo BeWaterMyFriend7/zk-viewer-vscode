@@ -44,4 +44,24 @@ suite('Detail panel (mock)', () => {
 
     await vscode.commands.executeCommand('zkViewer.disconnect');
   });
+
+  test('closes the detail panel when the node is deleted', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/gone', Buffer.from('{"keep":true}'), 'PERSISTENT');
+
+    await vscode.commands.executeCommand('zkViewer.openNodeDetail', { descriptor: { path: '/gone' } });
+    assert.ok(api.detailController(), 'the detail panel should be open');
+    // Give the async load/watch registration a moment to finish before deleting.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    await mock.remove('/gone');
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.strictEqual(api.detailController(), undefined, 'the panel should close after the node is deleted');
+
+    await vscode.commands.executeCommand('zkViewer.disconnect');
+  });
 });

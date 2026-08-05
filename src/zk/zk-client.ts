@@ -23,6 +23,13 @@ export interface NodeData {
   stat: ZnodeStat;
 }
 
+export type ZkWatchEventType = 'created' | 'deleted' | 'changed' | 'children-changed' | 'unknown';
+
+export interface ZkWatchEvent {
+  type: ZkWatchEventType;
+  path: string;
+}
+
 export const ZkErrorCode = {
   NO_NODE: 'NO_NODE',
   NODE_EXISTS: 'NODE_EXISTS',
@@ -51,6 +58,11 @@ export interface ZkClient {
   getChildren(path: string): Promise<string[]>;
   getData(path: string): Promise<NodeData>;
   getStat(path: string): Promise<ZnodeStat | undefined>;
+  /**
+   * Registers a one-shot data watch for the node. The listener fires on the
+   * next data change or deletion; callers must re-register to keep watching.
+   */
+  watchData(path: string, onEvent: (event: ZkWatchEvent) => void): Promise<void>;
   create(path: string, data: Buffer, mode: CreateMode): Promise<string>;
   setData(path: string, data: Buffer, version: number): Promise<void>;
   remove(path: string, version?: number): Promise<void>;
@@ -235,6 +247,41 @@ export class NodeZkClient implements ZkClient {
         resolve({ data: data ?? Buffer.alloc(0), stat: statToZnodeStat(stat) });
       });
     });
+  }
+
+  watchData(path: string, onEvent: (event: ZkWatchEvent) => void): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.client.getData(
+        path,
+        (event) => {
+          onEvent({ type: this.mapWatchEventType(event.type), path: event.path });
+        },
+        (err) => {
+          if (err) {
+            reject(this.mapError(err));
+            return;
+          }
+          resolve();
+        },
+      );
+    });
+  }
+
+  private mapWatchEventType(type: number): ZkWatchEventType {
+    const event = this.zk.Event;
+    if (type === event.NODE_CREATED) {
+      return 'created';
+    }
+    if (type === event.NODE_DELETED) {
+      return 'deleted';
+    }
+    if (type === event.NODE_DATA_CHANGED) {
+      return 'changed';
+    }
+    if (type === event.NODE_CHILDREN_CHANGED) {
+      return 'children-changed';
+    }
+    return 'unknown';
   }
 
   create(path: string, data: Buffer, mode: CreateMode): Promise<string> {

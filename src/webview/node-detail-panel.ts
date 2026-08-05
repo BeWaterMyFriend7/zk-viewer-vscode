@@ -35,13 +35,28 @@ export class NodeDetailPanel {
         localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')],
       },
     );
-    this.controller = new DetailPanelController(deps, {
-      postMessage: (message) => {
-        void this.panel.webview.postMessage(message);
+    this.controller = new DetailPanelController(
+      {
+        ...deps,
+        notifyError:
+          deps.notifyError ??
+          ((message: string) => {
+            void vscode.window.showErrorMessage(message);
+          }),
+        onNodeDeleted: (nodePath) => {
+          deps.onNodeDeleted?.(nodePath);
+          this.panel.dispose();
+        },
       },
-    });
+      {
+        postMessage: (message) => {
+          void this.panel.webview.postMessage(message);
+        },
+      },
+    );
     this.panel.webview.html = this.buildHtml(this.panel.webview);
     this.panel.onDidDispose(() => {
+      this.controller.dispose();
       if (NodeDetailPanel.current === this) {
         NodeDetailPanel.current = undefined;
       }
@@ -56,6 +71,7 @@ export class NodeDetailPanel {
     context: vscode.ExtensionContext,
     client: ZkClient,
     path: string,
+    extra?: Partial<DetailPanelDeps>,
   ): Promise<NodeDetailPanel> {
     if (NodeDetailPanel.current) {
       NodeDetailPanel.current.panel.dispose();
@@ -63,6 +79,8 @@ export class NodeDetailPanel {
     const panel = new NodeDetailPanel(context, path, {
       getNodeData: (nodePath) => client.getData(nodePath),
       saveNodeData: (nodePath, data, version) => client.setData(nodePath, data, version),
+      watchNode: (nodePath, onEvent) => client.watchData(nodePath, onEvent),
+      ...extra,
     });
     NodeDetailPanel.current = panel;
     return panel;

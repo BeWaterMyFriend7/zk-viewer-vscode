@@ -56,6 +56,10 @@ class FakeClient implements ZkClient {
     return Promise.resolve(undefined);
   }
 
+  watchData(): Promise<void> {
+    return Promise.resolve();
+  }
+
   create(): Promise<string> {
     return Promise.reject(new Error('not implemented'));
   }

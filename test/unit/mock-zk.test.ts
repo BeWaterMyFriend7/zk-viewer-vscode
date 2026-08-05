@@ -72,6 +72,30 @@ describe('MockZkClient', () => {
     assert.strictEqual((await client.getData('/n')).data.toString('utf8'), 'v4');
   });
 
+  it('fires one-shot data watchers on change and deletion', async () => {
+    await client.create('/n', Buffer.from('v1'), 'PERSISTENT');
+    const events: string[] = [];
+    await client.watchData('/n', (event) => events.push(`${event.type}:${event.path}`));
+
+    await client.setData('/n', Buffer.from('v2'), 0);
+    assert.deepStrictEqual(events, ['changed:/n']);
+
+    // Data watches are one-shot: a second change does not fire again.
+    await client.setData('/n', Buffer.from('v3'), 1);
+    assert.deepStrictEqual(events, ['changed:/n']);
+
+    await client.watchData('/n', (event) => events.push(`${event.type}:${event.path}`));
+    await client.remove('/n');
+    assert.deepStrictEqual(events, ['changed:/n', 'deleted:/n']);
+  });
+
+  it('rejects watching missing nodes', async () => {
+    await expectZkError(
+      client.watchData('/missing', () => {}),
+      ZkErrorCode.NO_NODE,
+    );
+  });
+
   it('removes empty nodes and rejects non-empty or missing ones', async () => {
     await client.create('/a', Buffer.alloc(0), 'PERSISTENT');
     await client.create('/a/b', Buffer.alloc(0), 'PERSISTENT');
