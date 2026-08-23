@@ -37,6 +37,10 @@ suite('Detail panel (mock)', () => {
     assert.ok(html.includes('id="display-text"'), 'the panel should provide a TXT display button');
     assert.ok(html.includes('id="toggle-wrap"'), 'the panel should provide a line-wrap button');
     assert.ok(html.includes('id="compact-json"'), 'the panel should provide a compact JSON button');
+    assert.ok(html.includes('class="detail-shell"'), 'the panel should use the compact detail layout');
+    assert.ok(html.includes('class="stat-card"'), 'node metadata should be grouped in a card');
+    assert.ok(html.includes('class="segmented-control"'), 'display modes should be grouped together');
+    assert.ok(html.includes('class="action-bar"'), 'editing actions should have a separate footer');
 
     await controller?.handleMessage({
       type: 'save',

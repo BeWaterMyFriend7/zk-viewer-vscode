@@ -76,6 +76,30 @@ suite('Search and navigation (mock)', () => {
     await vscode.commands.executeCommand('zkViewer.disconnect');
   });
 
+  test('path contains search matches text at any depth', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/sg', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/sg/abc', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/sg/abc/192.168.126.100:28080', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/sg/abc/192.168.126.100:28080/1.0', Buffer.alloc(0), 'PERSISTENT');
+
+    const outcome = (await vscode.commands.executeCommand('zkViewer.search', {
+      mode: 'contains',
+      query: '168',
+    })) as SearchOutcome;
+
+    assert.deepStrictEqual(
+      outcome.results.map((result) => result.path),
+      ['/sg/abc/192.168.126.100:28080', '/sg/abc/192.168.126.100:28080/1.0'],
+    );
+
+    await vscode.commands.executeCommand('zkViewer.disconnect');
+  });
+
   test('subtree search limits results to the target node subtree', async () => {
     await api.store.clear();
     await vscode.commands.executeCommand('zkViewer.connect');

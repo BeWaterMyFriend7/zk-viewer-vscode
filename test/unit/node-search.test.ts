@@ -71,6 +71,26 @@ describe('searchNodes', () => {
     );
   });
 
+  it('matches text contained anywhere in a full path', async () => {
+    const client = new MockZkClient();
+    await client.connect();
+    await client.create('/sg', Buffer.alloc(0), 'PERSISTENT');
+    await client.create('/sg/abc', Buffer.alloc(0), 'PERSISTENT');
+    await client.create('/sg/abc/192.168.126.100:28080', Buffer.alloc(0), 'PERSISTENT');
+    await client.create('/sg/abc/192.168.126.100:28080/1.0', Buffer.alloc(0), 'PERSISTENT');
+
+    const { results } = await searchNodes(client, { mode: 'contains', query: '168' });
+
+    assert.deepStrictEqual(
+      results.map((r) => r.path),
+      ['/sg/abc/192.168.126.100:28080', '/sg/abc/192.168.126.100:28080/1.0'],
+    );
+    assert.ok(results.every((result) => result.matchedBy === 'path'));
+
+    const noCaseFold = await searchNodes(client, { mode: 'contains', query: 'SG' });
+    assert.deepStrictEqual(noCaseFold.results, [], 'ZooKeeper path matching should remain case-sensitive');
+  });
+
   it('matches node content within a subtree', async () => {
     const client = await seedTree();
     const { results } = await searchNodes(client, { mode: 'content', query: 'role', subtree: '/app' });

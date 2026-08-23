@@ -2,7 +2,7 @@ import type { ZkClient } from '../zk/zk-client';
 import { mapLimit, walkTree } from '../utils/async';
 import { normalizePath } from './path-resolver';
 
-export type SearchMode = 'exact' | 'prefix' | 'wildcard' | 'regex' | 'content';
+export type SearchMode = 'exact' | 'prefix' | 'contains' | 'wildcard' | 'regex' | 'content';
 
 export interface SearchOptions {
   mode: SearchMode;
@@ -19,7 +19,7 @@ export interface SearchOptions {
 export interface SearchResult {
   path: string;
   name: string;
-  matchedBy: 'name' | 'content';
+  matchedBy: 'name' | 'path' | 'content';
 }
 
 export interface SearchOutcome {
@@ -96,7 +96,7 @@ export async function searchNodes(client: ZkClient, options: SearchOptions): Pro
       const target = normalizePath(options.query);
       if (await client.exists(target)) {
         return {
-          results: [{ path: target, name: nameOf(target), matchedBy: 'name' }],
+          results: [{ path: target, name: nameOf(target), matchedBy: 'path' }],
           truncated: false,
           visitedNodes: 1,
           maxNodes,
@@ -117,14 +117,16 @@ export async function searchNodes(client: ZkClient, options: SearchOptions): Pro
     };
   }
 
-  const matcher =
+  const matcher: (path: string, name: string) => SearchResult['matchedBy'] | undefined =
     options.mode === 'prefix'
-      ? (name: string) => name.startsWith(options.query)
-      : options.mode === 'wildcard'
-        ? (path: string) => globToRegex(options.query).test(path)
-        : options.mode === 'regex'
-          ? (path: string) => new RegExp(options.query).test(path)
-          : () => false;
+      ? (_path: string, name: string) => (name.startsWith(options.query) ? 'name' : undefined)
+      : options.mode === 'contains'
+        ? (path: string) => (path.includes(options.query) ? 'path' : undefined)
+        : options.mode === 'wildcard'
+          ? (path: string) => (globToRegex(options.query).test(path) ? 'path' : undefined)
+          : options.mode === 'regex'
+            ? (path: string) => (new RegExp(options.query).test(path) ? 'path' : undefined)
+            : () => undefined;
 
   const walkOpts = {
     concurrency,
@@ -198,8 +200,9 @@ export async function searchNodes(client: ZkClient, options: SearchOptions): Pro
     async (path) => {
       const name = nameOf(path);
       if (name !== '/') {
-        if (matcher(options.mode === 'prefix' ? name : path)) {
-          results.push({ path, name, matchedBy: 'name' });
+        const matchedBy = matcher(path, name);
+        if (matchedBy) {
+          results.push({ path, name, matchedBy });
         }
       }
       try {

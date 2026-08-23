@@ -114,6 +114,60 @@ suite('Node actions (mock)', () => {
     await vscode.commands.executeCommand('zkViewer.disconnect');
   });
 
+  test('deletes dot-prefixed nodes through the command entry point', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/.hidden', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/.hidden-tree', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/.hidden-tree/child', Buffer.alloc(0), 'PERSISTENT');
+
+    await vscode.commands.executeCommand(
+      'zkViewer.deleteNode',
+      { descriptor: { path: '/.hidden' } },
+      { confirm: false, recursive: false },
+    );
+    await vscode.commands.executeCommand(
+      'zkViewer.deleteNode',
+      { descriptor: { path: '/.hidden-tree' } },
+      { confirm: false, recursive: true },
+    );
+
+    assert.strictEqual(await mock.exists('/.hidden'), false);
+    assert.strictEqual(await mock.exists('/.hidden-tree'), false);
+    assert.strictEqual(await mock.exists('/.hidden-tree/child'), false);
+
+    await vscode.commands.executeCommand('zkViewer.disconnect');
+  });
+
+  test('keeps a non-empty dot-prefixed node when recursive delete is not selected', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/.protected', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/.protected/child', Buffer.alloc(0), 'PERSISTENT');
+
+    await vscode.commands.executeCommand(
+      'zkViewer.deleteNode',
+      { descriptor: { path: '/.protected' } },
+      { confirm: false, recursive: false },
+    );
+
+    assert.strictEqual(await mock.exists('/.protected'), true);
+    assert.strictEqual(await mock.exists('/.protected/child'), true);
+    assert.match(
+      api.lastCommandError() ?? '',
+      /Cannot delete \/.protected \[NOT_EMPTY\]: node is not empty.*Delete Recursively/,
+      'the error should identify the path, error code, and available recursive action',
+    );
+
+    await vscode.commands.executeCommand('zkViewer.disconnect');
+  });
+
   test('rejects invalid node names through the add command', async () => {
     await api.store.clear();
     await vscode.commands.executeCommand('zkViewer.connect');

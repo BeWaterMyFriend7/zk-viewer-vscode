@@ -317,6 +317,7 @@ async function gotoPathCommand(targetPath?: string): Promise<void> {
 const SEARCH_MODES = [
   { label: 'Name prefix', mode: 'prefix' as const },
   { label: 'Exact path (e.g. /app/config)', mode: 'exact' as const },
+  { label: 'Path contains (e.g. 168)', mode: 'contains' as const },
   { label: 'Path wildcard (e.g. /app/*/config)', mode: 'wildcard' as const },
   { label: 'Path regex (e.g. ^/svc-\\d+$)', mode: 'regex' as const },
   { label: 'Content', mode: 'content' as const },
@@ -560,6 +561,7 @@ async function deleteNodeCommand(
   if (!path) {
     return;
   }
+  lastCommandError = undefined;
   if (path === '/') {
     void vscode.window.showWarningMessage('The root node cannot be deleted.');
     return;
@@ -592,12 +594,22 @@ async function deleteNodeCommand(
     treeProvider.refresh();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    if (err instanceof ZkError && err.code === ZkErrorCode.NOT_EMPTY) {
-      void vscode.window.showErrorMessage('Node is not empty. Use "Delete Recursively".');
-    } else {
-      void vscode.window.showErrorMessage(message);
+    const code = err instanceof ZkError ? err.code : undefined;
+    const guidance =
+      code === ZkErrorCode.NOT_EMPTY
+        ? 'node is not empty. Use "Delete Recursively".'
+        : code === ZkErrorCode.NO_AUTH
+          ? 'ZooKeeper denied access. Check authentication and ACL permissions.'
+          : code === ZkErrorCode.NO_NODE
+            ? 'node no longer exists. Refresh the tree.'
+            : message;
+    if (code === ZkErrorCode.NO_NODE) {
+      treeProvider.refresh();
     }
-    log(`Delete failed: ${message}`, 'error');
+    const userMessage = `Cannot delete ${path}${code ? ` [${code}]` : ''}: ${guidance}`;
+    lastCommandError = userMessage;
+    void vscode.window.showErrorMessage(userMessage);
+    log(`Delete failed for ${path}${code ? ` [${code}]` : ''}: ${message}`, 'error');
   }
 }
 

@@ -54,7 +54,7 @@ export class NodeDetailPanel {
         },
       },
     );
-    this.panel.webview.html = this.buildHtml(this.panel.webview);
+    this.panel.webview.html = this.buildHtml(this.panel.webview, path);
     this.panel.onDidDispose(() => {
       this.controller.dispose();
       if (NodeDetailPanel.current === this) {
@@ -86,7 +86,7 @@ export class NodeDetailPanel {
     return panel;
   }
 
-  private buildHtml(webview: vscode.Webview): string {
+  private buildHtml(webview: vscode.Webview, path: string): string {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'detail.js'),
     );
@@ -104,21 +104,42 @@ export class NodeDetailPanel {
   <title>Node detail</title>
 </head>
 <body>
-  <h1 id="path">${escapeHtml(this.panel.title)}</h1>
-  <div id="stat"></div>
-  <div class="toolbar display-toolbar">
-    <span>Display:</span>
-    <button id="display-json" type="button" aria-pressed="true">JSON</button>
-    <button id="display-text" type="button" aria-pressed="false">TXT</button>
-    <button id="toggle-wrap" type="button" aria-pressed="true">Wrap: On</button>
-    <button id="compact-json" type="button">Minify JSON</button>
-  </div>
-  <textarea id="data" spellcheck="false" placeholder="Node data"></textarea>
-  <div class="toolbar">
-    <button id="edit" type="button">Edit</button>
-    <button id="save" type="button">Save</button>
-    <span id="status"></span>
-  </div>
+  <main class="detail-shell">
+    <header class="detail-header">
+      <span class="eyebrow">ZooKeeper Node</span>
+      <h1 id="path">${escapeHtml(path)}</h1>
+    </header>
+
+    <section class="stat-card" aria-labelledby="stat-heading">
+      <h2 id="stat-heading">Node information</h2>
+      <div id="stat"></div>
+    </section>
+
+    <section class="data-card" aria-labelledby="data-heading">
+      <div class="data-toolbar">
+        <h2 id="data-heading">Node data</h2>
+        <div class="toolbar display-toolbar">
+          <span class="toolbar-label">Display</span>
+          <div class="segmented-control" role="group" aria-label="Display mode">
+            <button id="display-json" type="button" aria-pressed="true">JSON</button>
+            <button id="display-text" type="button" aria-pressed="false">TXT</button>
+          </div>
+          <button id="toggle-wrap" class="secondary-button" type="button" aria-pressed="true">Wrap: On</button>
+          <button id="compact-json" class="secondary-button" type="button">Minify JSON</button>
+        </div>
+      </div>
+
+      <textarea id="data" spellcheck="false" placeholder="Node data"></textarea>
+
+      <footer class="action-bar">
+        <span id="status" role="status" aria-live="polite"></span>
+        <div class="action-buttons">
+          <button id="edit" class="secondary-button" type="button">Edit</button>
+          <button id="save" class="primary-button" type="button">Save</button>
+        </div>
+      </footer>
+    </section>
+  </main>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
