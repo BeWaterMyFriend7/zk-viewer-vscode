@@ -30,6 +30,8 @@
     "onCommand:zkViewer.editNode",
     "onCommand:zkViewer.deleteNode",
     "onCommand:zkViewer.copyPath",
+    "onCommand:zkViewer.exportNodeData",
+    "onCommand:zkViewer.exportSubtreeData",
     "onCommand:zkViewer.openNodeDetail",
     "onCommand:zkViewer.setTreeSort",
     "onCommand:zkViewer.searchSubtree"
@@ -120,6 +122,16 @@
         "category": "ZooKeeper"
       },
       {
+        "command": "zkViewer.exportNodeData",
+        "title": "Export Node Data...",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.exportSubtreeData",
+        "title": "Export Node and Descendant Data...",
+        "category": "ZooKeeper"
+      },
+      {
         "command": "zkViewer.openNodeDetail",
         "title": "Open Details",
         "category": "ZooKeeper"
@@ -206,14 +218,24 @@
           "group": "zoo@4"
         },
         {
-          "command": "zkViewer.refresh",
+          "command": "zkViewer.exportNodeData",
           "when": "view == zkViewer.tree && viewItem == znode",
           "group": "zoo@5"
         },
         {
-          "command": "zkViewer.searchSubtree",
+          "command": "zkViewer.exportSubtreeData",
           "when": "view == zkViewer.tree && viewItem == znode",
           "group": "zoo@6"
+        },
+        {
+          "command": "zkViewer.refresh",
+          "when": "view == zkViewer.tree && viewItem == znode",
+          "group": "zoo@7"
+        },
+        {
+          "command": "zkViewer.searchSubtree",
+          "when": "view == zkViewer.tree && viewItem == znode",
+          "group": "zoo@8"
         }
       ]
     },

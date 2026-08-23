@@ -47,12 +47,13 @@ describe('DetailPanelController', () => {
     controller = new DetailPanelController(deps, view);
   });
 
-  it('loadData returns stat and formatted data', async () => {
+  it('loadData keeps raw JSON separate from its formatted display text', async () => {
     const message = await controller.load('/app/config');
     assert.strictEqual(message.type, 'loadData');
     assert.strictEqual(message.path, '/app/config');
     assert.strictEqual(message.kind, 'json');
-    assert.strictEqual(message.dataText, '{\n  "role": "web"\n}');
+    assert.strictEqual(message.dataText, '{"role":"web"}');
+    assert.strictEqual(message.displayText, '{\n  "role": "web"\n}');
     assert.strictEqual(message.editable, true);
     const stat = message.stat;
     for (const field of [
@@ -86,6 +87,52 @@ describe('DetailPanelController', () => {
     assert.ok(saved, 'a saved message should be posted');
     const reloaded = view.messages.find((m) => (m as { type: string }).type === 'loadData');
     assert.ok(reloaded, 'the panel should reload after saving');
+  });
+
+  it('compacts JSON display whitespace before saving while preserving string spaces', async () => {
+    const loaded = await controller.load('/app/config');
+    await controller.handleMessage({
+      type: 'save',
+      path: '/app/config',
+      text: '{\n  "role": "site admin",\n  "enabled": true\n}',
+      version: loaded.stat.version,
+      displayMode: 'json',
+    });
+
+    assert.strictEqual(
+      (await client.getData('/app/config')).data.toString('utf8'),
+      '{"role":"site admin","enabled":true}',
+    );
+  });
+
+  it('saves TXT mode exactly as edited without JSON normalization', async () => {
+    const loaded = await controller.load('/app/config');
+    const text = '{\n  "role": "admin"\n}\n';
+    await controller.handleMessage({
+      type: 'save',
+      path: '/app/config',
+      text,
+      version: loaded.stat.version,
+      displayMode: 'text',
+    });
+
+    assert.strictEqual((await client.getData('/app/config')).data.toString('utf8'), text);
+  });
+
+  it('rejects invalid JSON-mode edits instead of writing corrupted data', async () => {
+    const loaded = await controller.load('/app/config');
+    await controller.handleMessage({
+      type: 'save',
+      path: '/app/config',
+      text: '{ broken json',
+      version: loaded.stat.version,
+      displayMode: 'json',
+    });
+
+    assert.strictEqual((await client.getData('/app/config')).data.toString('utf8'), '{"role":"web"}');
+    const error = view.messages.find((message) => (message as { type: string }).type === 'error') as
+      { message: string } | undefined;
+    assert.match(error?.message ?? '', /Invalid JSON/);
   });
 
   it('reports a version conflict and does not overwrite data', async () => {

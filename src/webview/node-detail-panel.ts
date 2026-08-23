@@ -106,10 +106,17 @@ export class NodeDetailPanel {
 <body>
   <h1 id="path">${escapeHtml(this.panel.title)}</h1>
   <div id="stat"></div>
+  <div class="toolbar display-toolbar">
+    <span>Display:</span>
+    <button id="display-json" type="button" aria-pressed="true">JSON</button>
+    <button id="display-text" type="button" aria-pressed="false">TXT</button>
+    <button id="toggle-wrap" type="button" aria-pressed="true">Wrap: On</button>
+    <button id="compact-json" type="button">Minify JSON</button>
+  </div>
   <textarea id="data" spellcheck="false" placeholder="Node data"></textarea>
   <div class="toolbar">
-    <button id="edit">Edit</button>
-    <button id="save">Save</button>
+    <button id="edit" type="button">Edit</button>
+    <button id="save" type="button">Save</button>
     <span id="status"></span>
   </div>
   <script nonce="${nonce}" src="${scriptUri}"></script>

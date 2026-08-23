@@ -1,5 +1,5 @@
 import { ZkErrorCode, type NodeData, type ZkError, type ZkWatchEvent, type ZnodeStat } from '../zk/zk-client';
-import { formatData } from './json-utils';
+import { compactJson, formatData } from './json-utils';
 
 export interface DetailPanelDeps {
   getNodeData(path: string): Promise<NodeData>;
@@ -23,6 +23,7 @@ export interface LoadDataMessage {
   path: string;
   stat: ZnodeStat;
   dataText: string;
+  displayText: string;
   kind: 'json' | 'text' | 'binary';
   editable: boolean;
 }
@@ -66,7 +67,8 @@ export class DetailPanelController {
       type: 'loadData',
       path,
       stat,
-      dataText: formatted.text,
+      dataText: formatted.kind === 'binary' ? formatted.text : data.toString('utf8'),
+      displayText: formatted.text,
       kind: formatted.kind,
       editable: formatted.kind !== 'binary',
     };
@@ -135,6 +137,7 @@ export class DetailPanelController {
     path?: string;
     text?: string;
     version?: number;
+    displayMode?: 'json' | 'text';
   }): Promise<void> {
     if (message.type !== 'save') {
       return;
@@ -149,6 +152,19 @@ export class DetailPanelController {
     if (!this.loadedStat) {
       this.view.postMessage({ type: 'error', message: 'Node data has not been loaded yet' } as ErrorMessage);
       return;
+    }
+    let saveText = message.text;
+    if (message.displayMode === 'json') {
+      try {
+        saveText = compactJson(saveText);
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        this.view.postMessage({
+          type: 'error',
+          message: `Invalid JSON: ${detail}`,
+        } as ErrorMessage);
+        return;
+      }
     }
     if (this.deps.nodeExists) {
       let exists: boolean;
@@ -169,7 +185,7 @@ export class DetailPanelController {
       }
     }
     try {
-      await this.deps.saveNodeData(message.path, Buffer.from(message.text, 'utf8'), this.loadedStat.version);
+      await this.deps.saveNodeData(message.path, Buffer.from(saveText, 'utf8'), this.loadedStat.version);
       this.view.postMessage({ type: 'saved', path: message.path } as SaveResultMessage);
       await this.load(message.path);
     } catch (err) {

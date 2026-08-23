@@ -96,13 +96,14 @@ test/unit|perf|integration/
 
 ### 3.4 详情面板（webview/）
 
-- `json-utils`：数据分类（JSON / 文本 / 二进制含 `\0`），JSON 二空格格式化，二进制十六进制视图；
+- `json-utils`：数据分类（JSON / 文本 / 二进制含 `\0`），JSON 二空格格式化与安全紧凑化，二进制十六进制视图；
 - `DetailPanelController`：vscode 无关的消息协议，`loadData → save → saved/error`，保存携带 `stat.version` 乐观锁，`BadVersion` 冲突不覆盖并返回错误；保存前经 `nodeExists` 预检，删除 / 冲突错误通过 `notifyError` 弹出 VS Code 通知；打开节点时注册一次性数据 watch（`watchNode`），收到删除事件即报错并回调 `onNodeDeleted` 关闭面板，其他事件后自动重新武装以持续监测；
-- `NodeDetailPanel`：Webview 面板（CSP nonce + localResourceRoots），与控制器桥接；**默认只读**，必须点击「Edit」按钮才进入编辑模式（防误触），二进制数据始终只读；面板销毁时调用 `controller.dispose()` 停止响应陈旧 watch 事件。
+- `NodeDetailPanel`：Webview 面板（CSP nonce + localResourceRoots），与控制器桥接；原始数据与展示文本分离，支持 JSON / TXT 模式、换行开关与一键紧凑化，JSON 模式保存前紧凑序列化，TXT 模式原样保存；**默认只读**，必须点击「Edit」按钮才进入编辑模式（防误触），二进制数据始终只读；面板销毁时调用 `controller.dispose()` 停止响应陈旧 watch 事件。
 
 ### 3.5 节点操作（commands/）
 
 - `validateNodeName`：拒绝空名、`/`、`.`、`..`；
+- `collectNodeDataExport`：使用显式栈遍历节点，单节点模式只读取当前路径，子树模式读取全部后代；导出项包含完整路径，数据按 UTF-8 / Base64 自适应编码以保证无损；
 - `deleteNodeRecursively`：显式栈做叶子优先递归删除，避免深层树栈溢出；
 - 删除命令支持二次确认（模态框）与「递归删除」选项，取消则不调用客户端。
 

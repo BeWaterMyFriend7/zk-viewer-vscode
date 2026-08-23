@@ -42,7 +42,7 @@ export function formatData(data: Buffer): FormattedData {
   const text = data.toString('utf8');
   if (kind === 'json') {
     try {
-      return { kind, text: JSON.stringify(JSON.parse(text), null, 2) };
+      return { kind, text: formatJson(text) };
     } catch {
       return { kind, text };
     }
@@ -57,4 +57,83 @@ export function validateJson(text: string): { valid: true } | { valid: false; er
   } catch (err) {
     return { valid: false, error: err instanceof Error ? err.message : String(err) };
   }
+}
+
+/**
+ * Removes JSON presentation whitespace without re-serializing values. This
+ * preserves exact number spellings (including integers beyond Number's safe
+ * range) and whitespace inside strings.
+ */
+export function compactJson(text: string): string {
+  JSON.parse(text);
+  let result = '';
+  let inString = false;
+  let escaped = false;
+  for (const char of text) {
+    if (inString) {
+      result += char;
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+    } else if (char === '"') {
+      inString = true;
+      result += char;
+    } else if (char !== ' ' && char !== '\t' && char !== '\r' && char !== '\n') {
+      result += char;
+    }
+  }
+  return result;
+}
+
+export function formatJson(text: string): string {
+  const compact = compactJson(text);
+  let result = '';
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  const indentation = () => '  '.repeat(depth);
+
+  for (let index = 0; index < compact.length; index += 1) {
+    const char = compact[index];
+    if (inString) {
+      result += char;
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      result += char;
+    } else if (char === '{' || char === '[') {
+      result += char;
+      depth += 1;
+      const closing = char === '{' ? '}' : ']';
+      if (compact[index + 1] !== closing) {
+        result += `\n${indentation()}`;
+      }
+    } else if (char === '}' || char === ']') {
+      depth -= 1;
+      const opening = char === '}' ? '{' : '[';
+      if (compact[index - 1] !== opening) {
+        result += `\n${indentation()}`;
+      }
+      result += char;
+    } else if (char === ',') {
+      result += `,\n${indentation()}`;
+    } else if (char === ':') {
+      result += ': ';
+    } else {
+      result += char;
+    }
+  }
+  return result;
 }

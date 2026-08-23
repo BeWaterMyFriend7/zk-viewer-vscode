@@ -1,5 +1,12 @@
 import * as assert from 'assert';
-import { classifyNodeData, formatData, hexDump, validateJson } from '../../src/webview/json-utils';
+import {
+  classifyNodeData,
+  compactJson,
+  formatData,
+  formatJson,
+  hexDump,
+  validateJson,
+} from '../../src/webview/json-utils';
 
 describe('json-utils', () => {
   it('classifies node data as json, text or binary', () => {
@@ -35,5 +42,29 @@ describe('json-utils', () => {
     const invalid = validateJson('{"broken"');
     assert.strictEqual(invalid.valid, false);
     assert.ok('error' in invalid && invalid.error.length > 0);
+  });
+
+  it('compacts JSON whitespace without changing whitespace inside string values', () => {
+    assert.strictEqual(
+      compactJson('{\n  "message": "hello world",\n  "nested": { "ok": true }\n}'),
+      '{"message":"hello world","nested":{"ok":true}}',
+    );
+    assert.strictEqual(compactJson('{"line":"a\\nb","spaces":"a  b"}'), '{"line":"a\\nb","spaces":"a  b"}');
+  });
+
+  it('rejects invalid JSON instead of removing whitespace destructively', () => {
+    assert.throws(() => compactJson('not json with spaces'));
+  });
+
+  it('formats and compacts without changing large numbers or duplicate keys', () => {
+    const source = '{"id": 900719925474099312345, "value": -0, "same": 1, "same": 2}';
+    const compact = '{"id":900719925474099312345,"value":-0,"same":1,"same":2}';
+
+    assert.strictEqual(compactJson(source), compact);
+    assert.strictEqual(
+      formatJson(source),
+      '{\n  "id": 900719925474099312345,\n  "value": -0,\n  "same": 1,\n  "same": 2\n}',
+    );
+    assert.strictEqual(compactJson(formatJson(source)), compact);
   });
 });

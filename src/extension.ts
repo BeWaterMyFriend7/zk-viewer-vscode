@@ -11,6 +11,11 @@ import {
   type KeyValueStorage,
 } from './connections/connection-store';
 import { SecretStorageWrapper, type SecretStorageLike } from './connections/secret-storage';
+import {
+  collectNodeDataExport,
+  serializeNodeDataExport,
+  type NodeDataExport,
+} from './commands/export-node-data';
 import { deleteNodeRecursively, validateNodeName } from './commands/node-commands';
 import { log } from './log/activity-log';
 import { isSearchOptions, searchNodes, type SearchOptions, type SearchOutcome } from './search/node-search';
@@ -599,6 +604,61 @@ async function copyPathCommand(node?: ZkNode): Promise<void> {
   void vscode.window.showInformationMessage(`Copied ${path}`);
 }
 
+function exportFileName(path: string, recursive: boolean): string {
+  const pathName = path === '/' ? 'root' : path.slice(1).replace(/[^a-zA-Z0-9._-]+/g, '_');
+  return `${pathName || 'node'}${recursive ? '-subtree' : ''}.json`;
+}
+
+async function exportNodeDataCommand(
+  node: ZkNode | undefined,
+  recursive: boolean,
+  options?: { targetUri?: vscode.Uri },
+): Promise<NodeDataExport | undefined> {
+  const client = manager.getClient();
+  if (!client) {
+    void vscode.window.showInformationMessage('Not connected.');
+    return;
+  }
+  const path = node?.descriptor.path ?? treeView.selection[0]?.descriptor.path;
+  if (!path) {
+    return;
+  }
+  const workspaceUri = vscode.workspace.workspaceFolders?.[0]?.uri;
+  const fileName = exportFileName(path, recursive);
+  const defaultUri = workspaceUri ? vscode.Uri.joinPath(workspaceUri, fileName) : undefined;
+  const target =
+    options?.targetUri ??
+    (await vscode.window.showSaveDialog({
+      title: recursive ? `Export ${path} and all descendants` : `Export ${path}`,
+      defaultUri,
+      filters: { JSON: ['json'] },
+      saveLabel: 'Export',
+    }));
+  if (!target) {
+    return;
+  }
+  try {
+    const exported = await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: recursive ? `Exporting subtree ${path}...` : `Exporting ${path}...`,
+      },
+      () => collectNodeDataExport(client, path, recursive),
+    );
+    await vscode.workspace.fs.writeFile(target, Buffer.from(serializeNodeDataExport(exported), 'utf8'));
+    log(`Exported ${exported.nodes.length} node(s) from ${path} to ${target.fsPath}`);
+    void vscode.window.showInformationMessage(
+      `Exported ${exported.nodes.length} node(s) to ${target.fsPath}`,
+    );
+    return exported;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log(`Export failed: ${message}`, 'error');
+    void vscode.window.showErrorMessage(`Export failed: ${message}`);
+    return undefined;
+  }
+}
+
 async function setTreeSortCommand(): Promise<void> {
   const current = vscode.workspace.getConfiguration('zkViewer').get<TreeSortOrder>('treeSort') ?? 'name';
   const picked = await vscode.window.showQuickPick(
@@ -662,6 +722,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerCommand(context, 'zkViewer.editNode', openNodeDetailCommand);
   registerCommand(context, 'zkViewer.deleteNode', deleteNodeCommand);
   registerCommand(context, 'zkViewer.copyPath', copyPathCommand);
+  registerCommand(context, 'zkViewer.exportNodeData', (node?: ZkNode, options?: { targetUri?: vscode.Uri }) =>
+    exportNodeDataCommand(node, false, options),
+  );
+  registerCommand(
+    context,
+    'zkViewer.exportSubtreeData',
+    (node?: ZkNode, options?: { targetUri?: vscode.Uri }) => exportNodeDataCommand(node, true, options),
+  );
   registerCommand(context, 'zkViewer.openNodeDetail', openNodeDetailCommand);
   registerCommand(context, 'zkViewer.setTreeSort', setTreeSortCommand);
   registerCommand(context, 'zkViewer.searchSubtree', searchSubtreeCommand);

@@ -38,6 +38,8 @@ suite('Extension smoke', () => {
       'zkViewer.editNode',
       'zkViewer.deleteNode',
       'zkViewer.copyPath',
+      'zkViewer.exportNodeData',
+      'zkViewer.exportSubtreeData',
       'zkViewer.refresh',
     ]) {
       assert.ok(commands.includes(command), `context menu should include ${command}`);

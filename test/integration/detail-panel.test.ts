@@ -33,6 +33,10 @@ suite('Detail panel (mock)', () => {
 
     const html = api.detailPanelHtml() ?? '';
     assert.ok(html.includes('id="edit"'), 'the panel should provide an Edit button');
+    assert.ok(html.includes('id="display-json"'), 'the panel should provide a JSON display button');
+    assert.ok(html.includes('id="display-text"'), 'the panel should provide a TXT display button');
+    assert.ok(html.includes('id="toggle-wrap"'), 'the panel should provide a line-wrap button');
+    assert.ok(html.includes('id="compact-json"'), 'the panel should provide a compact JSON button');
 
     await controller?.handleMessage({
       type: 'save',

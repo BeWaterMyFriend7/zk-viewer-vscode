@@ -1,4 +1,6 @@
 import * as assert from 'assert';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import type * as ext from '../../src/extension';
 
@@ -132,5 +134,53 @@ suite('Node actions (mock)', () => {
     assert.strictEqual(await mock.exists('/bad/name'), false);
 
     await vscode.commands.executeCommand('zkViewer.disconnect');
+  });
+
+  test('exports one node or its complete subtree with paths and exact data', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/export', Buffer.from('root'), 'PERSISTENT');
+    await mock.create('/export/child', Buffer.from('{"value":1}'), 'PERSISTENT');
+    await mock.create('/export/child/leaf', Buffer.from('leaf'), 'PERSISTENT');
+
+    const singleUri = vscode.Uri.file(path.join(os.tmpdir(), `zk-viewer-single-${Date.now()}.json`));
+    const subtreeUri = vscode.Uri.file(path.join(os.tmpdir(), `zk-viewer-tree-${Date.now()}.json`));
+    try {
+      await vscode.commands.executeCommand(
+        'zkViewer.exportNodeData',
+        { descriptor: { path: '/export' } },
+        { targetUri: singleUri },
+      );
+      await vscode.commands.executeCommand(
+        'zkViewer.exportSubtreeData',
+        { descriptor: { path: '/export' } },
+        { targetUri: subtreeUri },
+      );
+
+      const single = JSON.parse(Buffer.from(await vscode.workspace.fs.readFile(singleUri)).toString('utf8'));
+      const subtree = JSON.parse(
+        Buffer.from(await vscode.workspace.fs.readFile(subtreeUri)).toString('utf8'),
+      );
+      assert.deepStrictEqual(single.nodes, [{ path: '/export', data: 'root', encoding: 'utf8' }]);
+      assert.deepStrictEqual(
+        subtree.nodes.map((node: { path: string }) => node.path),
+        ['/export', '/export/child', '/export/child/leaf'],
+      );
+      assert.strictEqual(subtree.nodes[1].data, '{"value":1}');
+    } finally {
+      await Promise.all(
+        [singleUri, subtreeUri].map(async (uri) => {
+          try {
+            await vscode.workspace.fs.delete(uri);
+          } catch {
+            // The command may fail before creating the temporary file.
+          }
+        }),
+      );
+      await vscode.commands.executeCommand('zkViewer.disconnect');
+    }
   });
 });

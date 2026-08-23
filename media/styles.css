@@ -24,7 +24,14 @@ body {
   border: 1px solid var(--vscode-input-border);
   box-sizing: border-box;
   padding: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+#data.no-wrap {
   white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
 }
 
 button {
@@ -46,11 +53,27 @@ button:not(:disabled):hover {
   background: var(--vscode-button-hoverBackground);
 }
 
+button.active {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-hoverBackground);
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
 .toolbar {
   margin-top: 8px;
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.display-toolbar {
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+
+.display-toolbar span {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
 }
 
 #status {
