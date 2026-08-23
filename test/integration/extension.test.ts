@@ -1,5 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import { getImportExportMessages } from '../../src/i18n/import-export-messages';
 
 suite('Extension smoke', () => {
   test('extension activates', async () => {
@@ -28,7 +29,12 @@ suite('Extension smoke', () => {
 
   test('tree context menus contribute node actions', async () => {
     const manifest = vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode')?.packageJSON as {
-      contributes?: { menus?: { 'view/item/context'?: Array<{ command: string }> } };
+      contributes?: {
+        menus?: {
+          'view/item/context'?: Array<{ command: string }>;
+          'view/title'?: Array<{ command: string }>;
+        };
+      };
     };
     const items = manifest?.contributes?.menus?.['view/item/context'] ?? [];
     const commands = items.map((item) => item.command);
@@ -40,9 +46,31 @@ suite('Extension smoke', () => {
       'zkViewer.copyPath',
       'zkViewer.exportNodeData',
       'zkViewer.exportSubtreeData',
+      'zkViewer.importNodeData',
       'zkViewer.refresh',
     ]) {
       assert.ok(commands.includes(command), `context menu should include ${command}`);
     }
+    const titleCommands = manifest?.contributes?.menus?.['view/title']?.map((item) => item.command) ?? [];
+    assert.ok(
+      titleCommands.includes('zkViewer.importNodeData'),
+      'view title should include the import button',
+    );
+  });
+
+  test('import and export command titles follow the VS Code display language', () => {
+    const manifest = vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode')?.packageJSON as {
+      contributes?: { commands?: Array<{ command: string; title: string }> };
+    };
+    const commands = manifest?.contributes?.commands ?? [];
+    const messages = getImportExportMessages(vscode.env.language);
+    assert.strictEqual(
+      commands.find((item) => item.command === 'zkViewer.importNodeData')?.title,
+      messages.importButton,
+    );
+    assert.strictEqual(
+      commands.find((item) => item.command === 'zkViewer.exportNodeData')?.title,
+      messages.exportNodeButton,
+    );
   });
 });

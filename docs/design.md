@@ -55,7 +55,8 @@ flowchart LR
 src/
   extension.ts          # 激活入口、命令注册、测试 API 暴露
   connections/          # 连接配置存储、SecretStorage、连接管理器
-  commands/             # 节点增删改与递归删除（纯逻辑，可单测）
+  commands/             # 节点增删改、导入导出与递归删除（纯逻辑，可单测）
+  i18n/                 # 导入导出运行时中英文消息
   tree/                 # TreeDataProvider、节点模型、懒加载列表
   search/               # 路径解析、名称/内容搜索
   webview/              # 详情面板、JSON 工具、消息控制器
@@ -104,8 +105,12 @@ test/unit|perf|integration/
 
 - `validateNodeName`：拒绝空名、`/`、`.`、`..`；
 - `collectNodeDataExport`：使用显式栈遍历节点，单节点模式只读取当前路径，子树模式读取全部后代；导出项包含完整路径，数据按 UTF-8 / Base64 自适应编码以保证无损；
+- `parseNodeDataImport`：严格校验导出格式版本、规范路径、根路径范围、重复项与 Base64 编码，解码为无损 Buffer；
+- `importNodeData`：写入前预检文档外部父节点，随后按路径深度父级优先创建；已存在节点按用户选择覆盖（版本校验）或跳过；
 - `deleteNodeRecursively`：显式栈做叶子优先递归删除，避免深层树栈溢出；
 - 删除命令支持二次确认（模态框）与「递归删除」选项，取消则不调用客户端。
+
+导入按钮贡献到 `view/title`（连接后显示）并同时出现在节点右键菜单。命令标题通过 `package.nls.json` / `package.nls.zh-cn.json` 本地化，运行时选择框、进度和结果提示由 `i18n/import-export-messages` 按 `vscode.env.language` 选择中文或英文。
 
 ### 3.6 客户端封装（zk/）
 
@@ -166,7 +171,7 @@ test/unit|perf|integration/
 
 ### 7.1 测试分层
 
-- **单元测试**（Mocha + Mock，无网络）：连接状态机、配置/密钥往返、搜索匹配、JSON 分类、消息协议、递归删除顺序、TLS 连接串；
+- **单元测试**（Mocha + Mock，无网络）：连接状态机、配置/密钥往返、搜索匹配、JSON 分类、消息协议、导入导出、递归删除顺序、TLS 连接串；
 - **性能测试**：500 子节点懒加载耗时 < 500ms，且只请求展开层级；500 节点内容搜索 < 2s；
 - **集成测试**（`@vscode/test-electron`，Mock 模式）：扩展激活、命令注册、菜单贡献、连接/树/搜索/面板/节点操作全流程。
 

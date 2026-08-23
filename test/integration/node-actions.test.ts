@@ -170,6 +170,20 @@ suite('Node actions (mock)', () => {
         ['/export', '/export/child', '/export/child/leaf'],
       );
       assert.strictEqual(subtree.nodes[1].data, '{"value":1}');
+
+      mock.clear();
+      const imported = await vscode.commands.executeCommand<{
+        created: number;
+        updated: number;
+        skipped: number;
+      }>('zkViewer.importNodeData', {
+        sourceUri: subtreeUri,
+        conflictPolicy: 'overwrite',
+      });
+      assert.deepStrictEqual(imported, { created: 3, updated: 0, skipped: 0 });
+      assert.strictEqual((await mock.getData('/export')).data.toString(), 'root');
+      assert.strictEqual((await mock.getData('/export/child')).data.toString(), '{"value":1}');
+      assert.strictEqual((await mock.getData('/export/child/leaf')).data.toString(), 'leaf');
     } finally {
       await Promise.all(
         [singleUri, subtreeUri].map(async (uri) => {

@@ -1,0 +1,5 @@
+{
+  "command.exportNodeData.title": "Export Node Data...",
+  "command.exportSubtreeData.title": "Export Node and Descendant Data...",
+  "command.importNodeData.title": "Import Node Data..."
+}

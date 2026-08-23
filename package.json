@@ -32,6 +32,7 @@
     "onCommand:zkViewer.copyPath",
     "onCommand:zkViewer.exportNodeData",
     "onCommand:zkViewer.exportSubtreeData",
+    "onCommand:zkViewer.importNodeData",
     "onCommand:zkViewer.openNodeDetail",
     "onCommand:zkViewer.setTreeSort",
     "onCommand:zkViewer.searchSubtree"
@@ -123,13 +124,19 @@
       },
       {
         "command": "zkViewer.exportNodeData",
-        "title": "Export Node Data...",
+        "title": "%command.exportNodeData.title%",
         "category": "ZooKeeper"
       },
       {
         "command": "zkViewer.exportSubtreeData",
-        "title": "Export Node and Descendant Data...",
+        "title": "%command.exportSubtreeData.title%",
         "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.importNodeData",
+        "title": "%command.importNodeData.title%",
+        "category": "ZooKeeper",
+        "icon": "$(cloud-upload)"
       },
       {
         "command": "zkViewer.openNodeDetail",
@@ -164,6 +171,11 @@
           "command": "zkViewer.refresh",
           "when": "view == zkViewer.tree && zkViewer:connected == true",
           "group": "navigation@3"
+        },
+        {
+          "command": "zkViewer.importNodeData",
+          "when": "view == zkViewer.tree && zkViewer:connected == true",
+          "group": "navigation@4"
         },
         {
           "command": "zkViewer.connect",
@@ -228,14 +240,19 @@
           "group": "zoo@6"
         },
         {
-          "command": "zkViewer.refresh",
+          "command": "zkViewer.importNodeData",
           "when": "view == zkViewer.tree && viewItem == znode",
           "group": "zoo@7"
         },
         {
-          "command": "zkViewer.searchSubtree",
+          "command": "zkViewer.refresh",
           "when": "view == zkViewer.tree && viewItem == znode",
           "group": "zoo@8"
+        },
+        {
+          "command": "zkViewer.searchSubtree",
+          "when": "view == zkViewer.tree && viewItem == znode",
+          "group": "zoo@9"
         }
       ]
     },

@@ -1,0 +1,5 @@
+{
+  "command.exportNodeData.title": "导出节点数据...",
+  "command.exportSubtreeData.title": "导出节点及所有后代数据...",
+  "command.importNodeData.title": "导入节点数据..."
+}

@@ -16,7 +16,14 @@ import {
   serializeNodeDataExport,
   type NodeDataExport,
 } from './commands/export-node-data';
+import {
+  importNodeData,
+  parseNodeDataImport,
+  type ImportConflictPolicy,
+  type NodeDataImportResult,
+} from './commands/import-node-data';
 import { deleteNodeRecursively, validateNodeName } from './commands/node-commands';
+import { getImportExportMessages } from './i18n/import-export-messages';
 import { log } from './log/activity-log';
 import { isSearchOptions, searchNodes, type SearchOptions, type SearchOutcome } from './search/node-search';
 import { resolvePath } from './search/path-resolver';
@@ -614,9 +621,10 @@ async function exportNodeDataCommand(
   recursive: boolean,
   options?: { targetUri?: vscode.Uri },
 ): Promise<NodeDataExport | undefined> {
+  const messages = getImportExportMessages(vscode.env.language);
   const client = manager.getClient();
   if (!client) {
-    void vscode.window.showInformationMessage('Not connected.');
+    void vscode.window.showInformationMessage(messages.notConnected);
     return;
   }
   const path = node?.descriptor.path ?? treeView.selection[0]?.descriptor.path;
@@ -629,10 +637,10 @@ async function exportNodeDataCommand(
   const target =
     options?.targetUri ??
     (await vscode.window.showSaveDialog({
-      title: recursive ? `Export ${path} and all descendants` : `Export ${path}`,
+      title: messages.exportDialogTitle(path, recursive),
       defaultUri,
       filters: { JSON: ['json'] },
-      saveLabel: 'Export',
+      saveLabel: messages.exportSaveLabel,
     }));
   if (!target) {
     return;
@@ -641,20 +649,110 @@ async function exportNodeDataCommand(
     const exported = await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: recursive ? `Exporting subtree ${path}...` : `Exporting ${path}...`,
+        title: messages.exportProgress(path, recursive),
       },
       () => collectNodeDataExport(client, path, recursive),
     );
     await vscode.workspace.fs.writeFile(target, Buffer.from(serializeNodeDataExport(exported), 'utf8'));
     log(`Exported ${exported.nodes.length} node(s) from ${path} to ${target.fsPath}`);
-    void vscode.window.showInformationMessage(
-      `Exported ${exported.nodes.length} node(s) to ${target.fsPath}`,
-    );
+    void vscode.window.showInformationMessage(messages.exportSuccess(exported.nodes.length, target.fsPath));
     return exported;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     log(`Export failed: ${message}`, 'error');
-    void vscode.window.showErrorMessage(`Export failed: ${message}`);
+    void vscode.window.showErrorMessage(messages.exportFailure(message));
+    return undefined;
+  }
+}
+
+interface ImportCommandOptions {
+  sourceUri?: vscode.Uri;
+  conflictPolicy?: ImportConflictPolicy;
+}
+
+function isImportCommandOptions(value: unknown): value is ImportCommandOptions {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const options = value as ImportCommandOptions;
+  return (
+    options.sourceUri instanceof vscode.Uri ||
+    options.conflictPolicy === 'overwrite' ||
+    options.conflictPolicy === 'skip'
+  );
+}
+
+async function importNodeDataCommand(
+  firstArg?: unknown,
+  secondArg?: ImportCommandOptions,
+): Promise<NodeDataImportResult | undefined> {
+  const messages = getImportExportMessages(vscode.env.language);
+  const client = manager.getClient();
+  if (!client) {
+    void vscode.window.showInformationMessage(messages.notConnected);
+    return;
+  }
+  const options = isImportCommandOptions(firstArg) ? firstArg : secondArg;
+  const source =
+    options?.sourceUri ??
+    (
+      await vscode.window.showOpenDialog({
+        title: messages.importDialogTitle,
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        filters: { JSON: ['json'] },
+        openLabel: messages.importOpenLabel,
+      })
+    )?.[0];
+  if (!source) {
+    return;
+  }
+
+  try {
+    const content = Buffer.from(await vscode.workspace.fs.readFile(source)).toString('utf8');
+    const document = parseNodeDataImport(content);
+    let conflictPolicy = options?.conflictPolicy;
+    if (!conflictPolicy) {
+      conflictPolicy = (
+        await vscode.window.showQuickPick(
+          [
+            {
+              label: messages.skipLabel,
+              description: messages.skipDescription,
+              policy: 'skip' as const,
+            },
+            {
+              label: messages.overwriteLabel,
+              description: messages.overwriteDescription,
+              policy: 'overwrite' as const,
+            },
+          ],
+          { placeHolder: messages.conflictPrompt },
+        )
+      )?.policy;
+    }
+    if (!conflictPolicy) {
+      return;
+    }
+    const result = await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: messages.importProgress,
+      },
+      () => importNodeData(client, document, conflictPolicy),
+    );
+    treeProvider.refresh();
+    log(
+      `Imported node data from ${source.fsPath}: ${result.created} created, ` +
+        `${result.updated} updated, ${result.skipped} skipped`,
+    );
+    void vscode.window.showInformationMessage(messages.importSuccess(result));
+    return result;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log(`Import failed: ${message}`, 'error');
+    void vscode.window.showErrorMessage(messages.importFailure(message));
     return undefined;
   }
 }
@@ -730,6 +828,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     'zkViewer.exportSubtreeData',
     (node?: ZkNode, options?: { targetUri?: vscode.Uri }) => exportNodeDataCommand(node, true, options),
   );
+  registerCommand(context, 'zkViewer.importNodeData', importNodeDataCommand);
   registerCommand(context, 'zkViewer.openNodeDetail', openNodeDetailCommand);
   registerCommand(context, 'zkViewer.setTreeSort', setTreeSortCommand);
   registerCommand(context, 'zkViewer.searchSubtree', searchSubtreeCommand);
