@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { getImportExportMessages } from '../../src/i18n/import-export-messages';
+import { getImportExportMessages, resolveUiLanguage } from '../../src/i18n/import-export-messages';
 
 suite('Extension smoke', () => {
   test('extension activates', async () => {
@@ -38,16 +38,6 @@ suite('Extension smoke', () => {
     };
     const items = manifest?.contributes?.menus?.['view/item/context'] ?? [];
     const commands = items.map((item) => item.command);
-    for (const command of [
-      'zkViewer.openNodeDetail',
-      'zkViewer.addNode',
-      'zkViewer.editNode',
-      'zkViewer.deleteNode',
-      'zkViewer.copyPath',
-      'zkViewer.refresh',
-    ]) {
-      assert.ok(commands.includes(command), `context menu should include ${command}`);
-    }
     assert.ok(
       commands.every((command) => !command.startsWith('zkViewer.importNodeData')),
       'node context menu must not include the global import command',
@@ -62,11 +52,10 @@ suite('Extension smoke', () => {
     }
 
     const titleItems = manifest?.contributes?.menus?.['view/title'] ?? [];
-    const sort = titleItems.find((item) => item.command === 'zkViewer.setTreeSort');
+    const sort = titleItems.find((item) => item.command === 'zkViewer.setTreeSort.zh');
     assert.strictEqual(sort?.group, 'zoo@3');
     for (const item of titleItems.filter((entry) => entry.command.startsWith('zkViewer.importNodeData.'))) {
       assert.strictEqual(item.group, 'zoo@4');
-      assert.match(item.when ?? '', /zkViewer:connected == true/);
     }
     for (const item of titleItems.filter((entry) => entry.command.startsWith('zkViewer.openImportFormat.'))) {
       assert.strictEqual(item.group, 'zoo@5');
@@ -88,6 +77,46 @@ suite('Extension smoke', () => {
       titleItems.filter((item) => item.command.startsWith('zkViewer.setLanguage.')).length,
       2,
       'the title bar should contain one Chinese and one English language alias',
+    );
+  });
+
+  test('all visible tree actions switch language and global import stays discoverable', () => {
+    const manifest = vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode')?.packageJSON as {
+      contributes?: {
+        menus?: {
+          'view/item/context'?: Array<{ command: string; when?: string }>;
+          'view/title'?: Array<{ command: string; when?: string }>;
+        };
+      };
+    };
+    const itemCommands =
+      manifest.contributes?.menus?.['view/item/context']?.map((item) => item.command) ?? [];
+    const titleItems = manifest.contributes?.menus?.['view/title'] ?? [];
+    const titleCommands = titleItems.map((item) => item.command);
+
+    for (const command of [
+      'zkViewer.openNodeDetail',
+      'zkViewer.addNode',
+      'zkViewer.editNode',
+      'zkViewer.deleteNode',
+      'zkViewer.copyPath',
+      'zkViewer.refresh',
+      'zkViewer.searchSubtree',
+    ]) {
+      assert.ok(!itemCommands.includes(command), `menu must not expose fixed-language command ${command}`);
+      assert.ok(itemCommands.includes(`${command}.zh`), `menu should include Chinese alias for ${command}`);
+      assert.ok(itemCommands.includes(`${command}.en`), `menu should include English alias for ${command}`);
+    }
+    for (const command of ['zkViewer.editConnection', 'zkViewer.removeConnection', 'zkViewer.setTreeSort']) {
+      assert.ok(!titleCommands.includes(command), `menu must not expose fixed-language command ${command}`);
+      assert.ok(titleCommands.includes(`${command}.zh`), `menu should include Chinese alias for ${command}`);
+      assert.ok(titleCommands.includes(`${command}.en`), `menu should include English alias for ${command}`);
+    }
+    const imports = titleItems.filter((item) => item.command.startsWith('zkViewer.importNodeData.'));
+    assert.strictEqual(imports.length, 2);
+    assert.ok(
+      imports.every((item) => !(item.when ?? '').includes('connected')),
+      'global import should remain visible while disconnected',
     );
   });
 
@@ -124,6 +153,36 @@ suite('Extension smoke', () => {
       });
       assert.strictEqual(english, 'en');
       assert.strictEqual(vscode.workspace.getConfiguration('zkViewer').get<string>('uiLanguage'), 'en');
+    } finally {
+      await config.update('uiLanguage', previous, vscode.ConfigurationTarget.Global);
+    }
+  });
+
+  test('follow VS Code resolves and applies the current VS Code display language', async () => {
+    const config = vscode.workspace.getConfiguration('zkViewer');
+    const previous = config.get<string>('uiLanguage');
+    const expected = resolveUiLanguage('auto', vscode.env.language);
+    try {
+      await vscode.commands.executeCommand('zkViewer.setLanguage', {
+        preference: expected === 'zh-cn' ? 'en' : 'zh-cn',
+        silent: true,
+      });
+      const actual = await vscode.commands.executeCommand<string>('zkViewer.setLanguage', {
+        preference: 'auto',
+        silent: true,
+      });
+
+      assert.strictEqual(actual, expected);
+      assert.strictEqual(vscode.workspace.getConfiguration('zkViewer').get<string>('uiLanguage'), 'auto');
+      const api = (
+        globalThis as {
+          __zkViewerTestApi?: { statusBarText(): string };
+        }
+      ).__zkViewerTestApi;
+      assert.strictEqual(
+        api?.statusBarText(),
+        getImportExportMessages(expected).connection.statusDisconnected,
+      );
     } finally {
       await config.update('uiLanguage', previous, vscode.ConfigurationTarget.Global);
     }

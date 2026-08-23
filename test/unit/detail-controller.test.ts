@@ -4,6 +4,7 @@ import {
   type DetailPanelDeps,
   type DetailView,
 } from '../../src/webview/detail-controller';
+import { getImportExportMessages } from '../../src/i18n/import-export-messages';
 import { MockZkClient } from '../../src/zk/mock-zk';
 import { ZkErrorCode } from '../../src/zk/zk-client';
 
@@ -154,7 +155,7 @@ describe('DetailPanelController', () => {
     assert.strictEqual((await client.getData('/app/config')).data.toString('utf8'), '{"changed":true}');
     assert.ok(
       notifyErrors.some(
-        (entry) => entry.code === ZkErrorCode.BAD_VERSION && entry.message.includes('版本已变化'),
+        (entry) => entry.code === ZkErrorCode.BAD_VERSION && entry.message.includes('version changed'),
       ),
       'a version conflict should produce a notification',
     );
@@ -204,7 +205,7 @@ describe('DetailPanelController', () => {
     assert.strictEqual(error?.code, ZkErrorCode.NO_NODE);
     assert.ok(
       notifyErrors.some(
-        (entry) => entry.code === ZkErrorCode.NO_NODE && entry.message.includes('节点已被删除'),
+        (entry) => entry.code === ZkErrorCode.NO_NODE && entry.message.includes('node was deleted'),
       ),
     );
   });
@@ -228,7 +229,7 @@ describe('DetailPanelController', () => {
 
     assert.ok(
       notifyErrors.some(
-        (entry) => entry.code === ZkErrorCode.NO_NODE && entry.message.includes('节点已被删除'),
+        (entry) => entry.code === ZkErrorCode.NO_NODE && entry.message.includes('node was deleted'),
       ),
     );
   });
@@ -260,5 +261,14 @@ describe('DetailPanelController', () => {
   it('handles unknown messages without crashing', async () => {
     await controller.handleMessage({ type: 'ping' });
     assert.strictEqual(view.messages.length, 0);
+  });
+
+  it('switches controller errors to the selected language', async () => {
+    controller.setMessages(getImportExportMessages('zh-cn').detail);
+    await controller.handleMessage({ type: 'save', path: '/app/config', text: '{}', version: 0 });
+
+    const error = view.messages.find((message) => (message as { type: string }).type === 'error') as
+      { message: string } | undefined;
+    assert.strictEqual(error?.message, '节点数据尚未加载');
   });
 });

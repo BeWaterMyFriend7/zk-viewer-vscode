@@ -1,7 +1,9 @@
 import { ZkErrorCode, type NodeData, type ZkError, type ZkWatchEvent, type ZnodeStat } from '../zk/zk-client';
+import { getImportExportMessages, type DetailMessages } from '../i18n/import-export-messages';
 import { compactJson, formatData } from './json-utils';
 
 export interface DetailPanelDeps {
+  messages?: DetailMessages;
   getNodeData(path: string): Promise<NodeData>;
   saveNodeData(path: string, data: Buffer, version: number): Promise<void>;
   /** Optional pre-save existence check so a deleted node fails fast and clearly. */
@@ -48,11 +50,18 @@ export class DetailPanelController {
   private loadedPath: string | undefined;
   private watchArmed = false;
   private disposed = false;
+  private messages: DetailMessages;
 
   constructor(
     private readonly deps: DetailPanelDeps,
     private readonly view: DetailView,
-  ) {}
+  ) {
+    this.messages = deps.messages ?? getImportExportMessages('en').detail;
+  }
+
+  setMessages(messages: DetailMessages): void {
+    this.messages = messages;
+  }
 
   getLastLoad(): { path: string; stat: ZnodeStat } | undefined {
     return this.loadedPath && this.loadedStat ? { path: this.loadedPath, stat: this.loadedStat } : undefined;
@@ -125,10 +134,10 @@ export class DetailPanelController {
     this.loadedStat = undefined;
     this.view.postMessage({
       type: 'error',
-      message: `Node has been deleted: ${path}`,
+      message: this.messages.deletedMessage(path),
       code: ZkErrorCode.NO_NODE,
     } as ErrorMessage);
-    this.deps.notifyError?.(`节点已被删除，详情面板将关闭：${path}`, ZkErrorCode.NO_NODE);
+    this.deps.notifyError?.(this.messages.deletedNotification(path), ZkErrorCode.NO_NODE);
     this.deps.onNodeDeleted?.(path);
   }
 
@@ -145,12 +154,12 @@ export class DetailPanelController {
     if (!message.path || message.text === undefined) {
       this.view.postMessage({
         type: 'error',
-        message: 'Save message is missing path or data',
+        message: this.messages.saveMessageMissing,
       } as ErrorMessage);
       return;
     }
     if (!this.loadedStat) {
-      this.view.postMessage({ type: 'error', message: 'Node data has not been loaded yet' } as ErrorMessage);
+      this.view.postMessage({ type: 'error', message: this.messages.dataNotLoaded } as ErrorMessage);
       return;
     }
     let saveText = message.text;
@@ -161,7 +170,7 @@ export class DetailPanelController {
         const detail = err instanceof Error ? err.message : String(err);
         this.view.postMessage({
           type: 'error',
-          message: `Invalid JSON: ${detail}`,
+          message: this.messages.invalidJson(detail),
         } as ErrorMessage);
         return;
       }
@@ -177,10 +186,10 @@ export class DetailPanelController {
       if (!exists) {
         this.view.postMessage({
           type: 'error',
-          message: `Node does not exist: ${message.path}`,
+          message: this.messages.nodeDoesNotExist(message.path),
           code: ZkErrorCode.NO_NODE,
         } as ErrorMessage);
-        this.deps.notifyError?.('保存失败：节点已被删除，请刷新后重试', ZkErrorCode.NO_NODE);
+        this.deps.notifyError?.(this.messages.saveDeleted, ZkErrorCode.NO_NODE);
         return;
       }
     }
@@ -201,11 +210,11 @@ export class DetailPanelController {
       message: errorMessage,
       code: zkError.code,
     } as ErrorMessage);
-    let notification = `保存失败：${errorMessage}`;
+    let notification = this.messages.saveFailed(errorMessage);
     if (zkError.code === ZkErrorCode.NO_NODE) {
-      notification = `保存失败：节点已被删除，请刷新后重试（${errorMessage}）`;
+      notification = this.messages.saveDeletedWithDetail(errorMessage);
     } else if (zkError.code === ZkErrorCode.BAD_VERSION) {
-      notification = `保存失败：节点版本已变化，请重新加载后重试（${errorMessage}）`;
+      notification = this.messages.saveVersionConflict(errorMessage);
     }
     this.deps.notifyError?.(notification, zkError.code);
   }

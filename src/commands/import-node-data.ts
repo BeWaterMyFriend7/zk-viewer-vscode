@@ -18,6 +18,51 @@ export interface NodeDataImportResult {
   skipped: number;
 }
 
+export type NodeDataImportErrorCode =
+  | 'invalid-json'
+  | 'invalid-document'
+  | 'empty-document'
+  | 'invalid-node'
+  | 'invalid-or-duplicate-path'
+  | 'invalid-base64'
+  | 'missing-root'
+  | 'non-recursive-multiple'
+  | 'missing-parent';
+
+function defaultImportErrorMessage(code: NodeDataImportErrorCode, path?: string, detail?: string): string {
+  switch (code) {
+    case 'invalid-json':
+      return `Invalid JSON: ${detail ?? ''}`.trim();
+    case 'invalid-document':
+      return 'Invalid ZooKeeper node data export document';
+    case 'empty-document':
+      return 'Import document does not contain any nodes';
+    case 'invalid-node':
+      return 'Invalid node entry in import document';
+    case 'invalid-or-duplicate-path':
+      return `Invalid or duplicate node path: ${path ?? ''}`.trim();
+    case 'invalid-base64':
+      return `Invalid Base64 data for node: ${path ?? ''}`.trim();
+    case 'missing-root':
+      return `Import document does not contain its root node: ${path ?? ''}`.trim();
+    case 'non-recursive-multiple':
+      return 'A non-recursive import document must contain only its root node';
+    case 'missing-parent':
+      return `Parent node does not exist: ${path ?? ''}`.trim();
+  }
+}
+
+export class NodeDataImportError extends Error {
+  constructor(
+    readonly code: NodeDataImportErrorCode,
+    readonly path?: string,
+    readonly detail?: string,
+  ) {
+    super(defaultImportErrorMessage(code, path, detail));
+    this.name = 'NodeDataImportError';
+  }
+}
+
 const DOCUMENT_FIELDS = new Set(['format', 'version', 'rootPath', 'recursive', 'nodes']);
 const NODE_FIELDS = new Set(['path', 'data', 'encoding']);
 
@@ -49,7 +94,16 @@ function isCanonicalBase64(value: string): boolean {
 }
 
 export function parseNodeDataImport(text: string): NodeDataImport {
-  const value: unknown = JSON.parse(text);
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch (error) {
+    throw new NodeDataImportError(
+      'invalid-json',
+      undefined,
+      error instanceof Error ? error.message : String(error),
+    );
+  }
   if (
     !isRecord(value) ||
     !hasOnlyFields(value, DOCUMENT_FIELDS) ||
@@ -60,11 +114,11 @@ export function parseNodeDataImport(text: string): NodeDataImport {
     typeof value.recursive !== 'boolean' ||
     !Array.isArray(value.nodes)
   ) {
-    throw new Error('Invalid ZooKeeper node data export document');
+    throw new NodeDataImportError('invalid-document');
   }
 
   if (value.nodes.length === 0) {
-    throw new Error('Import document does not contain any nodes');
+    throw new NodeDataImportError('empty-document');
   }
   const seenPaths = new Set<string>();
   const nodes = value.nodes.map((node): ImportedNodeData => {
@@ -76,7 +130,7 @@ export function parseNodeDataImport(text: string): NodeDataImport {
       typeof node.data !== 'string' ||
       (node.encoding !== 'utf8' && node.encoding !== 'base64')
     ) {
-      throw new Error('Invalid node entry in import document');
+      throw new NodeDataImportError('invalid-node');
     }
     if (
       (value.rootPath !== '/' &&
@@ -84,10 +138,10 @@ export function parseNodeDataImport(text: string): NodeDataImport {
         !node.path.startsWith(`${value.rootPath}/`)) ||
       seenPaths.has(node.path)
     ) {
-      throw new Error(`Invalid or duplicate node path: ${node.path}`);
+      throw new NodeDataImportError('invalid-or-duplicate-path', node.path);
     }
     if (node.encoding === 'base64' && !isCanonicalBase64(node.data)) {
-      throw new Error(`Invalid Base64 data for node: ${node.path}`);
+      throw new NodeDataImportError('invalid-base64', node.path);
     }
     seenPaths.add(node.path);
     return {
@@ -96,10 +150,10 @@ export function parseNodeDataImport(text: string): NodeDataImport {
     };
   });
   if (!seenPaths.has(value.rootPath)) {
-    throw new Error(`Import document does not contain its root node: ${value.rootPath}`);
+    throw new NodeDataImportError('missing-root', value.rootPath);
   }
   if (!value.recursive && nodes.length !== 1) {
-    throw new Error('A non-recursive import document must contain only its root node');
+    throw new NodeDataImportError('non-recursive-multiple');
   }
 
   return { rootPath: value.rootPath, nodes };
@@ -134,7 +188,7 @@ export async function importNodeData(
   );
   for (const parent of externalParents) {
     if (!(await client.exists(parent))) {
-      throw new Error(`Parent node does not exist: ${parent}`);
+      throw new NodeDataImportError('missing-parent', parent);
     }
   }
 

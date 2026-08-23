@@ -67,19 +67,29 @@ export class NodeTreeProvider implements vscode.TreeDataProvider<ZkNode> {
   }
 }
 
+export class TreeRevealError extends Error {
+  constructor(
+    readonly code: 'not-visible' | 'sidebar-not-open',
+    readonly path: string,
+  ) {
+    super(code === 'not-visible' ? `Path not visible in tree: ${path}` : 'ZooKeeper sidebar is not open');
+    this.name = 'TreeRevealError';
+  }
+}
+
 export async function findNodeInTree(provider: NodeTreeProvider, path: string): Promise<ZkNode> {
   const segments = path.split('/').filter(Boolean);
   const roots = await provider.getChildren(undefined);
   const rootNode = roots.find((node) => node.descriptor.path === '/');
   if (!rootNode) {
-    throw new Error(`Root node is not visible: ${path}`);
+    throw new TreeRevealError('not-visible', path);
   }
   let current: ZkNode = rootNode;
   for (const segment of segments) {
     const children = await provider.getChildren(current);
     const next = children.find((node) => node.descriptor.name === segment);
     if (!next) {
-      throw new Error(`Path not visible in tree: ${path}`);
+      throw new TreeRevealError('not-visible', path);
     }
     current = next;
   }
@@ -104,7 +114,7 @@ export async function revealPathInTree(
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   if (!treeView.visible) {
-    throw new Error('ZooKeeper 侧边栏未打开，无法定位节点，请先打开侧边栏再试');
+    throw new TreeRevealError('sidebar-not-open', path);
   }
   await treeView.reveal(node, { expand: true, focus: true, select: true });
 }

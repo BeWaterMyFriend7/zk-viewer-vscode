@@ -1,14 +1,21 @@
 import type { ZkClient } from '../zk/zk-client';
 
-export function validateNodeName(name: string): string | undefined {
+export function validateNodeName(
+  name: string,
+  messages: { empty: string; slash: string; dot: string } = {
+    empty: 'Node name must not be empty',
+    slash: 'Node name must not contain "/"',
+    dot: 'Node name must not be "." or ".."',
+  },
+): string | undefined {
   if (name.length === 0) {
-    return 'Node name must not be empty';
+    return messages.empty;
   }
   if (name.includes('/')) {
-    return 'Node name must not contain "/"';
+    return messages.slash;
   }
   if (name === '.' || name === '..') {
-    return 'Node name must not be "." or ".."';
+    return messages.dot;
   }
   return undefined;
 }

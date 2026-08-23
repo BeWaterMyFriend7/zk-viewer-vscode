@@ -1,5 +1,9 @@
 import * as assert from 'assert';
-import { importNodeData, parseNodeDataImport } from '../../src/commands/import-node-data';
+import {
+  importNodeData,
+  NodeDataImportError,
+  parseNodeDataImport,
+} from '../../src/commands/import-node-data';
 import { MockZkClient } from '../../src/zk/mock-zk';
 
 describe('node data import', () => {
@@ -123,6 +127,32 @@ describe('node data import', () => {
     for (const document of invalidDocuments) {
       assert.throws(() => parseNodeDataImport(JSON.stringify(document)));
     }
+  });
+
+  it('reports stable validation codes so the UI can localize import failures', () => {
+    assert.throws(
+      () => parseNodeDataImport('{broken'),
+      (error: unknown) =>
+        error instanceof NodeDataImportError &&
+        error.code === 'invalid-json' &&
+        typeof error.detail === 'string',
+    );
+    assert.throws(
+      () =>
+        parseNodeDataImport(
+          JSON.stringify({
+            format: 'zk-viewer-node-data',
+            version: 1,
+            rootPath: '/app',
+            recursive: true,
+            nodes: [{ path: '/other', data: 'x', encoding: 'utf8' }],
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof NodeDataImportError &&
+        error.code === 'invalid-or-duplicate-path' &&
+        error.path === '/other',
+    );
   });
 
   it('checks missing external parents before making any changes', async () => {

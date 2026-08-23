@@ -72,4 +72,52 @@ suite('Detail panel (mock)', () => {
 
     await vscode.commands.executeCommand('zkViewer.disconnect');
   });
+
+  test('renders every detail action and label in the selected Chinese language', async () => {
+    const config = vscode.workspace.getConfiguration('zkViewer');
+    const previous = config.get<string>('uiLanguage');
+    try {
+      await vscode.commands.executeCommand('zkViewer.setLanguage', {
+        preference: 'zh-cn',
+        silent: true,
+      });
+      await api.store.clear();
+      await vscode.commands.executeCommand('zkViewer.connect');
+      const mock = api.mockClients.get('localhost:2181|');
+      assert.ok(mock);
+      mock.clear();
+      await mock.create('/localized', Buffer.from('{"enabled":true}'), 'PERSISTENT');
+
+      await vscode.commands.executeCommand('zkViewer.openNodeDetail', {
+        descriptor: { path: '/localized' },
+      });
+      const html = api.detailPanelHtml() ?? '';
+      for (const expected of [
+        '节点信息',
+        '节点数据',
+        '显示',
+        '换行：开',
+        '压缩 JSON',
+        '编辑',
+        '保存',
+        '只读',
+      ]) {
+        assert.ok(html.includes(expected), `detail panel should include Chinese text: ${expected}`);
+      }
+      for (const english of [
+        'Node information',
+        'Node data',
+        'Display',
+        'Wrap: On',
+        'Minify JSON',
+        '>Edit<',
+        '>Save<',
+      ]) {
+        assert.ok(!html.includes(english), `detail panel should not include English UI text: ${english}`);
+      }
+    } finally {
+      await vscode.commands.executeCommand('zkViewer.disconnect');
+      await config.update('uiLanguage', previous, vscode.ConfigurationTarget.Global);
+    }
+  });
 });

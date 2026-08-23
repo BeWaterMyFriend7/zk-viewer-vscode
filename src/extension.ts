@@ -18,6 +18,7 @@ import {
 } from './commands/export-node-data';
 import {
   importNodeData,
+  NodeDataImportError,
   parseNodeDataImport,
   type ImportConflictPolicy,
   type NodeDataImportResult,
@@ -34,7 +35,7 @@ import {
 import { log } from './log/activity-log';
 import { isSearchOptions, searchNodes, type SearchOptions, type SearchOutcome } from './search/node-search';
 import { resolvePath } from './search/path-resolver';
-import { NodeTreeProvider, revealPathInTree, type ZkNode } from './tree/node-tree-provider';
+import { NodeTreeProvider, revealPathInTree, TreeRevealError, type ZkNode } from './tree/node-tree-provider';
 import { ImportTemplatePanel } from './webview/import-template-panel';
 import { NodeDetailPanel } from './webview/node-detail-panel';
 import { TREE_SORT_ORDERS, type TreeSortOrder } from './tree/node-tree';
@@ -124,7 +125,12 @@ function updateUiLanguageContext(): Promise<UiLanguage> {
     if (language !== appliedUiLanguage) {
       await vscode.commands.executeCommand('setContext', 'zkViewer:uiLanguage', language);
       appliedUiLanguage = language;
-      ImportTemplatePanel.refresh(getImportExportMessages(language), language);
+      const messages = getImportExportMessages(language);
+      ImportTemplatePanel.refresh(messages, language);
+      NodeDetailPanel.refresh(messages);
+      if (statusBar && manager) {
+        updateUiState(manager.getState());
+      }
     }
     return language;
   });
@@ -136,17 +142,18 @@ function updateUiLanguageContext(): Promise<UiLanguage> {
 }
 
 function updateUiState(state: string): void {
+  const messages = getUiMessages().connection;
   if (state === 'connected') {
-    statusBar.text = `$(plug) ZK: ${activeConnection?.name ?? 'connected'}`;
+    statusBar.text = messages.statusConnected(activeConnection?.name);
     statusBar.tooltip = activeConnection
       ? `${activeConnection.hosts}${activeConnection.chroot ?? ''}`
       : undefined;
     statusBar.show();
   } else if (state === 'connecting') {
-    statusBar.text = '$(sync~spin) ZK: connecting...';
+    statusBar.text = messages.statusConnecting;
     statusBar.show();
   } else {
-    statusBar.text = '$(circle-slash) ZK: disconnected';
+    statusBar.text = messages.statusDisconnected;
     statusBar.show();
   }
   void vscode.commands.executeCommand('setContext', 'zkViewer.connected', state === 'connected');
@@ -154,6 +161,7 @@ function updateUiState(state: string): void {
 }
 
 async function pickConnection(placeholder: string): Promise<ConnectionConfig | undefined> {
+  const messages = getUiMessages().connection;
   const configs = await store.list();
   if (configs.length === 0) {
     return undefined;
@@ -162,7 +170,7 @@ async function pickConnection(placeholder: string): Promise<ConnectionConfig | u
     configs.map((config) => ({
       label: config.name,
       detail: `${config.hosts}${config.chroot ?? ''}`,
-      description: config.username ? `user: ${config.username}` : 'no auth',
+      description: config.username ? messages.userDescription(config.username) : messages.noAuthDescription,
       config,
     })),
     { placeHolder: placeholder },
@@ -171,17 +179,18 @@ async function pickConnection(placeholder: string): Promise<ConnectionConfig | u
 }
 
 async function connectCommand(): Promise<void> {
+  const messages = getUiMessages().connection;
   if (manager.getState() === 'connected') {
-    void vscode.window.showInformationMessage('Already connected.');
+    void vscode.window.showInformationMessage(messages.alreadyConnected);
     return;
   }
-  let selected = await pickConnection('Select a connection');
+  let selected = await pickConnection(messages.selectConnection);
   if (!selected) {
     if (process.env.ZK_VIEWER_USE_MOCK === '1') {
       selected = { id: 'mock-default', name: 'Mock ZooKeeper', hosts: 'localhost:2181' };
       await store.save(selected);
     } else {
-      void vscode.window.showInformationMessage('No connections yet. Add one first.');
+      void vscode.window.showInformationMessage(messages.noConnections);
       return;
     }
   }
@@ -191,11 +200,11 @@ async function connectCommand(): Promise<void> {
     log(`Connecting to ${selected.hosts}${selected.chroot ?? ''}...`);
     await manager.connect(selected, password);
     log(`Connected to ${selected.name}`);
-    void vscode.window.showInformationMessage(`Connected to ${selected.name}`);
+    void vscode.window.showInformationMessage(messages.connected(selected.name));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     log(`Connection failed: ${message}`, 'error');
-    void vscode.window.showErrorMessage(`Connection failed: ${message}`);
+    void vscode.window.showErrorMessage(messages.connectionFailed(message));
   }
 }
 
@@ -206,12 +215,13 @@ async function disconnectCommand(): Promise<void> {
   manager.disconnect();
   activeConnection = undefined;
   log('Disconnected');
-  void vscode.window.showInformationMessage('Disconnected.');
+  void vscode.window.showInformationMessage(getUiMessages().connection.disconnected);
 }
 
 async function addConnectionCommand(): Promise<void> {
+  const messages = getUiMessages().connection;
   const name = await vscode.window.showInputBox({
-    title: 'Connection name',
+    title: messages.connectionNameTitle,
     value: 'ZooKeeper',
     ignoreFocusOut: true,
   });
@@ -219,7 +229,7 @@ async function addConnectionCommand(): Promise<void> {
     return;
   }
   const hosts = await vscode.window.showInputBox({
-    title: 'Hosts (comma separated)',
+    title: messages.hostsCommaTitle,
     value: 'localhost:2181',
     ignoreFocusOut: true,
   });
@@ -227,29 +237,32 @@ async function addConnectionCommand(): Promise<void> {
     return;
   }
   const chroot = await vscode.window.showInputBox({
-    title: 'Chroot (optional, e.g. /app)',
+    title: messages.chrootTitle,
     value: '',
     ignoreFocusOut: true,
   });
   if (chroot === undefined) {
     return;
   }
-  const username = await vscode.window.showInputBox({ title: 'Username (optional)', ignoreFocusOut: true });
+  const username = await vscode.window.showInputBox({
+    title: messages.usernameOptionalTitle,
+    ignoreFocusOut: true,
+  });
   if (username === undefined) {
     return;
   }
   const securePick = await vscode.window.showQuickPick(
     [
-      { label: 'No (plain zk://)', value: false },
-      { label: 'Yes (TLS, ssl://)', value: true },
+      { label: messages.tlsNoLabel, value: false },
+      { label: messages.tlsYesLabel, value: true },
     ],
-    { placeHolder: 'Use TLS?' },
+    { placeHolder: messages.tlsPrompt },
   );
   if (!securePick) {
     return;
   }
   const password = await vscode.window.showInputBox({
-    title: 'Password (optional)',
+    title: messages.passwordOptionalTitle,
     password: true,
     ignoreFocusOut: true,
   });
@@ -267,18 +280,19 @@ async function addConnectionCommand(): Promise<void> {
   };
   await store.save(config, password || undefined);
   log(`Saved connection "${config.name}" (${config.hosts}${config.chroot ?? ''})`);
-  void vscode.window.showInformationMessage(`Connection "${config.name}" saved.`);
+  void vscode.window.showInformationMessage(messages.connectionSaved(config.name));
 }
 
 async function editConnectionCommand(): Promise<void> {
-  const config = await pickConnection('Edit connection');
+  const messages = getUiMessages().connection;
+  const config = await pickConnection(messages.editConnectionPrompt);
   if (!config) {
-    void vscode.window.showInformationMessage('No connections to edit.');
+    void vscode.window.showInformationMessage(messages.noConnectionsToEdit);
     return;
   }
   const password = await store.getPassword(config.id);
   const name = await vscode.window.showInputBox({
-    title: 'Connection name',
+    title: messages.connectionNameTitle,
     value: config.name,
     ignoreFocusOut: true,
   });
@@ -286,7 +300,7 @@ async function editConnectionCommand(): Promise<void> {
     return;
   }
   const hosts = await vscode.window.showInputBox({
-    title: 'Hosts',
+    title: messages.hostsTitle,
     value: config.hosts,
     ignoreFocusOut: true,
   });
@@ -294,7 +308,7 @@ async function editConnectionCommand(): Promise<void> {
     return;
   }
   const username = await vscode.window.showInputBox({
-    title: 'Username (optional)',
+    title: messages.usernameOptionalTitle,
     value: config.username ?? '',
     ignoreFocusOut: true,
   });
@@ -302,7 +316,7 @@ async function editConnectionCommand(): Promise<void> {
     return;
   }
   const newPassword = await vscode.window.showInputBox({
-    title: 'Password (leave empty to keep existing)',
+    title: messages.passwordKeepTitle,
     password: true,
     ignoreFocusOut: true,
   });
@@ -320,16 +334,17 @@ async function editConnectionCommand(): Promise<void> {
 }
 
 async function removeConnectionCommand(): Promise<void> {
-  const config = await pickConnection('Remove connection');
+  const messages = getUiMessages().connection;
+  const config = await pickConnection(messages.removeConnectionPrompt);
   if (!config) {
     return;
   }
   const confirmed = await vscode.window.showWarningMessage(
-    `Remove connection "${config.name}"?`,
+    messages.removeConnectionConfirm(config.name),
     { modal: true },
-    'Remove',
+    messages.removeButton,
   );
-  if (confirmed !== 'Remove') {
+  if (confirmed !== messages.removeButton) {
     return;
   }
   await store.remove(config.id);
@@ -341,14 +356,19 @@ async function removeConnectionCommand(): Promise<void> {
 }
 
 async function gotoPathCommand(targetPath?: string): Promise<void> {
+  const messages = getUiMessages();
   const client = manager.getClient();
   if (!client) {
-    void vscode.window.showInformationMessage('Not connected.');
+    void vscode.window.showInformationMessage(messages.notConnected);
     return;
   }
   const input =
     targetPath ??
-    (await vscode.window.showInputBox({ title: 'Node path', value: '/', prompt: 'e.g. /app/config' }));
+    (await vscode.window.showInputBox({
+      title: messages.node.pathTitle,
+      value: '/',
+      prompt: messages.node.pathPrompt,
+    }));
   if (!input) {
     return;
   }
@@ -358,29 +378,35 @@ async function gotoPathCommand(targetPath?: string): Promise<void> {
     await revealPathInTree(treeView, treeProvider, resolved);
     log(`Revealed ${resolved}`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const rawMessage = err instanceof Error ? err.message : String(err);
+    const message =
+      err instanceof ZkError && err.code === ZkErrorCode.NO_NODE
+        ? messages.node.notFound(input)
+        : err instanceof TreeRevealError
+          ? err.code === 'sidebar-not-open'
+            ? messages.node.sidebarNotOpen
+            : messages.node.notFound(input)
+          : rawMessage.includes('must start with "/"')
+            ? messages.node.invalidPath(input)
+            : rawMessage;
     lastCommandError = message;
     log(`Goto path failed: ${message}`, 'error');
     void vscode.window.showErrorMessage(message);
   }
 }
 
-const SEARCH_MODES = [
-  { label: 'Name prefix', mode: 'prefix' as const },
-  { label: 'Exact path (e.g. /app/config)', mode: 'exact' as const },
-  { label: 'Path contains (e.g. 168)', mode: 'contains' as const },
-  { label: 'Path wildcard (e.g. /app/*/config)', mode: 'wildcard' as const },
-  { label: 'Path regex (e.g. ^/svc-\\d+$)', mode: 'regex' as const },
-  { label: 'Content', mode: 'content' as const },
-];
-
 async function promptSearchOptions(initialSubtree?: string): Promise<SearchOptions | undefined> {
-  const modePick = await vscode.window.showQuickPick(SEARCH_MODES, { placeHolder: 'Search mode' });
+  const messages = getUiMessages().search;
+  const modes: SearchOptions['mode'][] = ['prefix', 'exact', 'contains', 'wildcard', 'regex', 'content'];
+  const modePick = await vscode.window.showQuickPick(
+    modes.map((mode) => ({ label: messages.modeLabels[mode], mode })),
+    { placeHolder: messages.modePrompt },
+  );
   if (!modePick) {
     return undefined;
   }
   const query = await vscode.window.showInputBox({
-    title: `Search query (${modePick.label})`,
+    title: messages.queryTitle(modePick.label),
     ignoreFocusOut: true,
   });
   if (query === undefined || query.trim() === '') {
@@ -389,7 +415,7 @@ async function promptSearchOptions(initialSubtree?: string): Promise<SearchOptio
   let subtree = initialSubtree;
   if (!subtree && modePick.mode === 'content') {
     const input = await vscode.window.showInputBox({
-      title: 'Subtree root (optional, default /)',
+      title: messages.subtreeRootTitle,
       value: '/',
     });
     if (input === undefined) {
@@ -407,6 +433,7 @@ async function runSearch(
 ): Promise<SearchOutcome> {
   const maxNodes = vscode.workspace.getConfiguration('zkViewer').get<number>('maxSearchNodes') ?? 500000;
   const maxDataBytes = vscode.workspace.getConfiguration('zkViewer').get<number>('maxNodeDataBytes') ?? 0;
+  const messages = getUiMessages().search;
   const doSearch = (token?: vscode.CancellationToken) =>
     searchNodes(client, {
       ...opts,
@@ -419,7 +446,7 @@ async function runSearch(
     outcome = (await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Searching "${opts.query}"${opts.subtree && opts.subtree !== '/' ? ` under ${opts.subtree}` : ''}...`,
+        title: messages.progress(opts.query, opts.subtree),
         cancellable: true,
       },
       (_progress, token) => doSearch(token),
@@ -434,34 +461,40 @@ async function runSearch(
   );
   if (interactive) {
     if (outcome.cancelled) {
-      void vscode.window.showInformationMessage('Search cancelled.');
+      void vscode.window.showInformationMessage(messages.cancelled);
       return outcome;
     }
     if (outcome.truncated) {
-      void vscode.window.showWarningMessage(
-        `搜索达到节点上限（${outcome.maxNodes} 个），结果可能不完整。请提高 zkViewer.maxSearchNodes 或使用右键子树搜索缩小范围。`,
-      );
+      void vscode.window.showWarningMessage(messages.truncated(outcome.maxNodes));
     }
     if (outcome.oversizedSkipped > 0) {
-      void vscode.window.showWarningMessage(
-        `已跳过 ${outcome.oversizedSkipped} 个超大节点（超过 zkViewer.maxNodeDataBytes）。设为 0 可搜索全部节点。`,
-      );
+      void vscode.window.showWarningMessage(messages.oversizedSkipped(outcome.oversizedSkipped));
     }
     if (results.length === 0) {
-      void vscode.window.showInformationMessage('No matching nodes.');
+      void vscode.window.showInformationMessage(messages.noMatches);
       return outcome;
     }
     const picked = await vscode.window.showQuickPick(
-      results.map((result) => ({ label: result.path, description: result.matchedBy })),
-      { placeHolder: `Search results (${results.length} found)`, matchOnDescription: true },
+      results.map((result) => ({
+        label: result.path,
+        description: messages.matchedBy[result.matchedBy],
+      })),
+      { placeHolder: messages.results(results.length), matchOnDescription: true },
     );
     if (picked) {
       try {
         await revealPathInTree(treeView, treeProvider, picked.label);
       } catch (revealErr) {
-        const message = revealErr instanceof Error ? revealErr.message : String(revealErr);
-        log(`Reveal failed: ${message}`, 'error');
-        void vscode.window.showErrorMessage(message);
+        const rawMessage = revealErr instanceof Error ? revealErr.message : String(revealErr);
+        const nodeMessages = getUiMessages().node;
+        const userMessage =
+          revealErr instanceof TreeRevealError
+            ? revealErr.code === 'sidebar-not-open'
+              ? nodeMessages.sidebarNotOpen
+              : nodeMessages.notFound(picked.label)
+            : rawMessage;
+        log(`Reveal failed: ${rawMessage}`, 'error');
+        void vscode.window.showErrorMessage(userMessage);
       }
     }
   }
@@ -471,7 +504,7 @@ async function runSearch(
 async function searchCommand(arg?: unknown): Promise<unknown> {
   const client = manager.getClient();
   if (!client) {
-    void vscode.window.showInformationMessage('Not connected.');
+    void vscode.window.showInformationMessage(getUiMessages().notConnected);
     return;
   }
   // view/title buttons pass the TreeView as the first argument; only treat
@@ -487,7 +520,7 @@ async function searchCommand(arg?: unknown): Promise<unknown> {
 async function searchSubtreeCommand(node?: ZkNode, options?: SearchOptions): Promise<unknown> {
   const client = manager.getClient();
   if (!client) {
-    void vscode.window.showInformationMessage('Not connected.');
+    void vscode.window.showInformationMessage(getUiMessages().notConnected);
     return;
   }
   const subtree = (node as ZkNode | undefined)?.descriptor?.path ?? treeView.selection[0]?.descriptor.path;
@@ -506,9 +539,10 @@ async function searchSubtreeCommand(node?: ZkNode, options?: SearchOptions): Pro
 }
 
 async function openNodeDetailCommand(node?: ZkNode): Promise<void> {
+  const messages = getUiMessages();
   const client = manager.getClient();
   if (!client) {
-    void vscode.window.showInformationMessage('Not connected.');
+    void vscode.window.showInformationMessage(messages.notConnected);
     return;
   }
   let path: string | undefined = (node as ZkNode | undefined)?.descriptor?.path;
@@ -517,20 +551,22 @@ async function openNodeDetailCommand(node?: ZkNode): Promise<void> {
     path = selected?.descriptor.path;
   }
   if (!path) {
-    path = await vscode.window.showInputBox({ title: 'Node path', value: '/' });
+    path = await vscode.window.showInputBox({ title: messages.node.pathTitle, value: '/' });
   }
   if (!path) {
     return;
   }
   try {
     const resolved = await resolvePath(client, path);
-    await NodeDetailPanel.open(extensionContext, client, resolved, {
+    await NodeDetailPanel.open(extensionContext, client, resolved, getUiMessages(), {
       onNodeDeleted: () => treeProvider.refresh(),
     });
     log(`Opened detail panel for ${resolved}`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    log(`Open detail failed: ${message}`, 'error');
+    const rawMessage = err instanceof Error ? err.message : String(err);
+    const message =
+      err instanceof ZkError && err.code === ZkErrorCode.NO_NODE ? messages.node.notFound(path) : rawMessage;
+    log(`Open detail failed: ${rawMessage}`, 'error');
     void vscode.window.showErrorMessage(message);
   }
 }
@@ -539,23 +575,24 @@ async function addNodeCommand(
   node?: ZkNode,
   options?: { name?: string; mode?: string; data?: string },
 ): Promise<void> {
+  const messages = getUiMessages();
   const client = manager.getClient();
   if (!client) {
-    void vscode.window.showInformationMessage('Not connected.');
+    void vscode.window.showInformationMessage(messages.notConnected);
     return;
   }
   const parentPath = node?.descriptor.path ?? treeView.selection[0]?.descriptor.path;
   const resolvedParent =
-    parentPath ?? (await vscode.window.showInputBox({ title: 'Parent path', value: '/' }));
+    parentPath ?? (await vscode.window.showInputBox({ title: messages.node.parentPathTitle, value: '/' }));
   if (!resolvedParent) {
     return;
   }
   const name =
-    options?.name ?? (await vscode.window.showInputBox({ title: `Node name under ${resolvedParent}` }));
+    options?.name ?? (await vscode.window.showInputBox({ title: messages.node.nameTitle(resolvedParent) }));
   if (!name) {
     return;
   }
-  const invalid = validateNodeName(name);
+  const invalid = validateNodeName(name, messages.node.invalidName);
   if (invalid) {
     void vscode.window.showErrorMessage(invalid);
     log(`Add node rejected: ${invalid}`, 'error');
@@ -566,19 +603,26 @@ async function addNodeCommand(
     (
       await vscode.window.showQuickPick(
         [
-          { label: 'Persistent', mode: 'PERSISTENT' },
-          { label: 'Persistent Sequential', mode: 'PERSISTENT_SEQUENTIAL' },
-          { label: 'Ephemeral', mode: 'EPHEMERAL' },
-          { label: 'Ephemeral Sequential', mode: 'EPHEMERAL_SEQUENTIAL' },
+          { label: messages.node.typeLabels.PERSISTENT, mode: 'PERSISTENT' },
+          {
+            label: messages.node.typeLabels.PERSISTENT_SEQUENTIAL,
+            mode: 'PERSISTENT_SEQUENTIAL',
+          },
+          { label: messages.node.typeLabels.EPHEMERAL, mode: 'EPHEMERAL' },
+          {
+            label: messages.node.typeLabels.EPHEMERAL_SEQUENTIAL,
+            mode: 'EPHEMERAL_SEQUENTIAL',
+          },
         ],
-        { placeHolder: 'Node type' },
+        { placeHolder: messages.node.typePrompt },
       )
     )?.mode;
   if (!mode) {
     return;
   }
   const data =
-    options?.data ?? (await vscode.window.showInputBox({ title: 'Node data (optional)', value: '' }));
+    options?.data ??
+    (await vscode.window.showInputBox({ title: messages.node.dataOptionalTitle, value: '' }));
   if (data === undefined) {
     return;
   }
@@ -591,7 +635,7 @@ async function addNodeCommand(
     );
     log(`Created ${created} (${mode})`);
     treeProvider.refresh();
-    void vscode.window.showInformationMessage(`Created ${created}`);
+    void vscode.window.showInformationMessage(messages.node.created(created));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     log(`Add node failed: ${message}`, 'error');
@@ -603,9 +647,10 @@ async function deleteNodeCommand(
   node?: ZkNode,
   options?: { recursive?: boolean; confirm?: boolean | 'cancel' },
 ): Promise<void> {
+  const messages = getUiMessages();
   const client = manager.getClient();
   if (!client) {
-    void vscode.window.showInformationMessage('Not connected.');
+    void vscode.window.showInformationMessage(messages.notConnected);
     return;
   }
   const path = node?.descriptor.path ?? treeView.selection[0]?.descriptor.path;
@@ -614,7 +659,7 @@ async function deleteNodeCommand(
   }
   lastCommandError = undefined;
   if (path === '/') {
-    void vscode.window.showWarningMessage('The root node cannot be deleted.');
+    void vscode.window.showWarningMessage(messages.node.rootCannotDelete);
     return;
   }
   let recursive = options?.recursive ?? false;
@@ -624,16 +669,16 @@ async function deleteNodeCommand(
   }
   if (options?.confirm !== false) {
     const choice = await vscode.window.showWarningMessage(
-      `Delete ${path}?`,
+      messages.node.deleteConfirm(path),
       { modal: true },
-      'Delete',
-      'Delete Recursively',
+      messages.node.deleteButton,
+      messages.node.deleteRecursiveButton,
     );
     if (choice === undefined) {
       log('Delete cancelled');
       return;
     }
-    recursive = choice === 'Delete Recursively';
+    recursive = choice === messages.node.deleteRecursiveButton;
   }
   try {
     if (recursive) {
@@ -648,16 +693,16 @@ async function deleteNodeCommand(
     const code = err instanceof ZkError ? err.code : undefined;
     const guidance =
       code === ZkErrorCode.NOT_EMPTY
-        ? 'node is not empty. Use "Delete Recursively".'
+        ? messages.node.deleteNotEmpty
         : code === ZkErrorCode.NO_AUTH
-          ? 'ZooKeeper denied access. Check authentication and ACL permissions.'
+          ? messages.node.deleteNoAuth
           : code === ZkErrorCode.NO_NODE
-            ? 'node no longer exists. Refresh the tree.'
+            ? messages.node.deleteNoNode
             : message;
     if (code === ZkErrorCode.NO_NODE) {
       treeProvider.refresh();
     }
-    const userMessage = `Cannot delete ${path}${code ? ` [${code}]` : ''}: ${guidance}`;
+    const userMessage = messages.node.deleteFailure(path, code, guidance);
     lastCommandError = userMessage;
     void vscode.window.showErrorMessage(userMessage);
     log(`Delete failed for ${path}${code ? ` [${code}]` : ''}: ${message}`, 'error');
@@ -671,7 +716,7 @@ async function copyPathCommand(node?: ZkNode): Promise<void> {
   }
   await vscode.env.clipboard.writeText(path);
   log(`Copied path ${path}`);
-  void vscode.window.showInformationMessage(`Copied ${path}`);
+  void vscode.window.showInformationMessage(getUiMessages().node.copied(path));
 }
 
 function exportFileName(path: string, recursive: boolean): string {
@@ -813,22 +858,28 @@ async function importNodeDataCommand(
     void vscode.window.showInformationMessage(messages.importSuccess(result));
     return result;
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    log(`Import failed: ${message}`, 'error');
-    void vscode.window.showErrorMessage(messages.importFailure(message));
+    const detail =
+      err instanceof NodeDataImportError
+        ? messages.importValidationFailure(err.code, err.path, err.detail)
+        : err instanceof Error
+          ? err.message
+          : String(err);
+    log(`Import failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    void vscode.window.showErrorMessage(messages.importFailure(detail));
     return undefined;
   }
 }
 
 async function setTreeSortCommand(): Promise<void> {
+  const messages = getUiMessages().sort;
   const current = vscode.workspace.getConfiguration('zkViewer').get<TreeSortOrder>('treeSort') ?? 'name';
   const picked = await vscode.window.showQuickPick(
     TREE_SORT_ORDERS.map((option) => ({
-      label: option.label,
-      description: option.value === current ? 'current' : undefined,
+      label: messages.labels[option.value],
+      description: option.value === current ? messages.current : undefined,
       value: option.value,
     })),
-    { placeHolder: 'Sort nodes by' },
+    { placeHolder: messages.prompt },
   );
   if (!picked) {
     return;
@@ -838,7 +889,7 @@ async function setTreeSortCommand(): Promise<void> {
     .update('treeSort', picked.value, vscode.ConfigurationTarget.Global);
   treeProvider.refresh();
   log(`Tree sort set to ${picked.value}`);
-  void vscode.window.showInformationMessage(`Sorted by: ${picked.label}`);
+  void vscode.window.showInformationMessage(messages.changed(picked.label));
 }
 
 interface SetLanguageCommandOptions {
@@ -978,19 +1029,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     (globalThis as { __zkViewerTestApi?: unknown }).__zkViewerTestApi = getTestApi();
   }
 
-  registerCommand(context, 'zkViewer.connect', connectCommand);
-  registerCommand(context, 'zkViewer.disconnect', disconnectCommand);
-  registerCommand(context, 'zkViewer.addConnection', addConnectionCommand);
-  registerCommand(context, 'zkViewer.editConnection', editConnectionCommand);
-  registerCommand(context, 'zkViewer.removeConnection', removeConnectionCommand);
+  registerLocalizedCommand(context, 'zkViewer.connect', connectCommand);
+  registerLocalizedCommand(context, 'zkViewer.disconnect', disconnectCommand);
+  registerLocalizedCommand(context, 'zkViewer.addConnection', addConnectionCommand);
+  registerLocalizedCommand(context, 'zkViewer.editConnection', editConnectionCommand);
+  registerLocalizedCommand(context, 'zkViewer.removeConnection', removeConnectionCommand);
 
-  registerCommand(context, 'zkViewer.refresh', () => treeProvider.refresh());
-  registerCommand(context, 'zkViewer.search', searchCommand);
-  registerCommand(context, 'zkViewer.gotoPath', gotoPathCommand);
-  registerCommand(context, 'zkViewer.addNode', addNodeCommand);
-  registerCommand(context, 'zkViewer.editNode', openNodeDetailCommand);
-  registerCommand(context, 'zkViewer.deleteNode', deleteNodeCommand);
-  registerCommand(context, 'zkViewer.copyPath', copyPathCommand);
+  registerLocalizedCommand(context, 'zkViewer.refresh', () => treeProvider.refresh());
+  registerLocalizedCommand(context, 'zkViewer.search', searchCommand);
+  registerLocalizedCommand(context, 'zkViewer.gotoPath', gotoPathCommand);
+  registerLocalizedCommand(context, 'zkViewer.addNode', addNodeCommand);
+  registerLocalizedCommand(context, 'zkViewer.editNode', openNodeDetailCommand);
+  registerLocalizedCommand(context, 'zkViewer.deleteNode', deleteNodeCommand);
+  registerLocalizedCommand(context, 'zkViewer.copyPath', copyPathCommand);
   registerLocalizedCommand(
     context,
     'zkViewer.exportNodeData',
@@ -1005,9 +1056,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerLocalizedCommand(context, 'zkViewer.openImportFormat', openImportFormatCommand);
   registerLocalizedCommand(context, 'zkViewer.setLanguage', setLanguageCommand);
   registerCommand(context, 'zkViewer.downloadImportTemplate', downloadImportTemplateCommand);
-  registerCommand(context, 'zkViewer.openNodeDetail', openNodeDetailCommand);
-  registerCommand(context, 'zkViewer.setTreeSort', setTreeSortCommand);
-  registerCommand(context, 'zkViewer.searchSubtree', searchSubtreeCommand);
+  registerLocalizedCommand(context, 'zkViewer.openNodeDetail', openNodeDetailCommand);
+  registerLocalizedCommand(context, 'zkViewer.setTreeSort', setTreeSortCommand);
+  registerLocalizedCommand(context, 'zkViewer.searchSubtree', searchSubtreeCommand);
 
   log('zk-viewer-vscode activated');
 }
@@ -1030,6 +1081,7 @@ export function getTestApi(): {
   treeView: vscode.TreeView<ZkNode>;
   detailController: () => ReturnType<typeof NodeDetailPanel.getController>;
   detailPanelHtml: () => string | undefined;
+  statusBarText: () => string;
   lastRevealedPath: () => string | undefined;
   lastCommandError: () => string | undefined;
   getActiveConnection: () => ConnectionConfig | undefined;
@@ -1042,6 +1094,7 @@ export function getTestApi(): {
     treeView,
     detailController: () => NodeDetailPanel.getController(),
     detailPanelHtml: () => NodeDetailPanel.getCurrentHtml(),
+    statusBarText: () => statusBar.text,
     lastRevealedPath: () => lastRevealedPath,
     lastCommandError: () => lastCommandError,
     getActiveConnection: () => activeConnection,

@@ -56,7 +56,7 @@ src/
   extension.ts          # 激活入口、命令注册、测试 API 暴露
   connections/          # 连接配置存储、SecretStorage、连接管理器
   commands/             # 节点增删改、导入导出与递归删除（纯逻辑，可单测）
-  i18n/                 # 导入、导出、模板和语言设置的运行时中英文消息
+  i18n/                 # 扩展菜单、命令、通知与 Webview 共用的运行时中英文消息
   tree/                 # TreeDataProvider、节点模型、懒加载列表
   search/               # 路径解析、名称/内容搜索
   webview/              # 详情面板、JSON 工具、消息控制器
@@ -111,9 +111,9 @@ test/unit|perf|integration/
 - `deleteNodeRecursively`：显式栈做叶子优先递归删除，避免深层树栈溢出；
 - 删除命令支持二次确认（模态框）与「递归删除」选项，取消则不调用客户端。
 
-导入入口仅贡献到 `view/title` 的省略号菜单，排序为 `Sort Nodes...` 之后；节点右键菜单只保留节点级导出。其下提供 `View Import Format`，打开没有 `textarea` 或 `contenteditable` 的只读 Webview，并可下载标准模板。
+导入入口仅贡献到 `view/title` 的省略号菜单，排序为 `Sort Nodes...` 之后并保持始终可见；未连接时由命令处理器提示先连接。节点右键菜单只保留节点级导出。其下提供 `View Import Format`，打开没有 `textarea` 或 `contenteditable` 的只读 Webview，并可下载标准模板。
 
-`zkViewer.uiLanguage` 支持 `auto / zh-cn / en`，通过 `zkViewer.setLanguage` 全局持久化；`auto` 跟随 `vscode.env.language`。扩展将解析后的语言写入 `zkViewer:uiLanguage` 上下文键，使标题栏和节点菜单只显示对应语言的命令别名；运行时选择框、进度、结果及模板面板由 `i18n/import-export-messages` 使用同一解析结果。
+`zkViewer.uiLanguage` 支持 `auto / zh-cn / en`，通过 `zkViewer.setLanguage` 全局持久化；`auto` 跟随 `vscode.env.language`。扩展将解析后的语言写入 `zkViewer:uiLanguage` 上下文键，使标题栏、节点菜单和命令面板只显示对应语言的命令别名；连接与节点操作、搜索、进度、通知、导入导出和模板面板由 `i18n/import-export-messages` 使用同一解析结果。节点详情 Webview 接收同一消息字典，并通过 `languageChanged` 消息即时更新已打开面板，不重建编辑状态。
 
 ### 3.6 客户端封装（zk/）
 

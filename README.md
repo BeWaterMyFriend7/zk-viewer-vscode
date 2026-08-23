@@ -9,7 +9,7 @@ ZooKeeper 轻量级可视化 VS Code 插件：在编辑器内完成节点树浏�
 - **查询搜索**：侧边栏标题栏 **放大镜快捷搜索**、路径定位（`zkViewer.gotoPath`）、名称前缀 / 路径通配符 / 正则 / 节点内容搜索；遍历并发化，内容搜索自动跳过空数据与超大节点
 - **JSON 查看与编辑**：详情面板展示 stat 与格式化 JSON；支持 JSON / TXT 显示切换、换行开关和安全的一键 JSON 紧凑化；**默认只读，点击 Edit 才进入编辑**，保存带版本号乐观锁（冲突不覆盖）；非 JSON 文本与二进制（十六进制）自动降级
 - **节点操作**：新增（四种节点类型）、编辑、删除（含递归删除与二次确认）、复制路径；可将单节点或完整子树无损导出为 JSON，并从导出文件恢复节点
-- **中英文界面**：导入 / 导出 / 模板相关按钮与提示支持中文和英文；可通过标题栏语言按钮选择跟随 VS Code、中文或英文
+- **中英文界面**：树菜单、连接与节点操作、搜索、通知和详情面板均支持中文和英文；可通过标题栏语言按钮选择跟随 VS Code、中文或英文
 
 ## 兼容性
 
@@ -42,7 +42,7 @@ ZK_VIEWER_USE_MOCK=1 code .        # PowerShell: $env:ZK_VIEWER_USE_MOCK="1"; co
 1. 点击活动栏的 ZooKeeper 图标打开侧边栏
 2. 点击侧边栏标题栏的 **加号** 新建连接，配置服务器地址（如 `localhost:2181`）与认证信息
 3. 点击 **连接**（插头图标）建立连接，展开节点树浏览
-4. 右键节点执行新增、删除、复制路径和导出；侧边栏 `ZooKeeper Nodes` 省略号菜单在排序项下方提供全局导入；双击打开详情面板查看 JSON（只读），点击 **Edit** 进入编辑
+4. 右键节点执行新增、删除、复制路径和导出；侧边栏 `ZooKeeper Nodes` 省略号菜单在排序项下方始终提供全局导入（未连接时点击会提示先连接）；双击打开详情面板查看 JSON（只读），点击 **编辑 / Edit** 进入编辑
 5. 点击侧边栏标题栏的 **放大镜**，或在命令面板（`Ctrl+Shift+P`）使用 `ZooKeeper: Search Nodes...` 快速定位
 
 ### 连接管理
@@ -121,11 +121,11 @@ ZK_VIEWER_USE_MOCK=1 code .        # PowerShell: $env:ZK_VIEWER_USE_MOCK="1"; co
 - 右键选择 `Export Node Data...`：仅导出当前节点
 - 右键选择 `Export Node and Descendant Data...`：导出当前节点及所有层级的子节点，直到叶子节点
 - 导出文件为 JSON，每项包含完整 `path`、`data` 和 `encoding`；普通文本使用 `utf8`，无法无损表示为 UTF-8 的数据使用 `base64`
-- 连接后打开 `ZooKeeper Nodes` 标题栏的 **省略号菜单**，在 `Sort Nodes...` 下方选择 `Import Node Data...`，可读取上述 JSON 并按完整路径恢复节点；导入是全局操作，不出现在节点右键菜单
+- 打开 `ZooKeeper Nodes` 标题栏的 **省略号菜单**，在 **节点排序... / Sort Nodes...** 下方选择 **导入节点数据... / Import Node Data...**，可读取上述 JSON 并按完整路径恢复节点；入口始终可见，未连接时点击会提示先连接；导入是全局操作，不出现在节点右键菜单
 - `View Import Format` 会打开只读格式说明页；可直接下载标准模板，但不能在面板中编辑模板。模板与真实导出共用 `zk-viewer-node-data` 版本 1 结构和序列化逻辑
 - 导入前选择已存在节点的处理方式：**跳过**会保留已有数据，**覆盖**会使用版本校验更新数据；缺失节点按父级优先创建为持久节点
 - 文件格式、版本、未知字段、路径范围、重复路径、Base64 数据和外部父节点会在写入前校验；不支持自定义字段映射，不符合标准导出结构的 JSON 不会导入
-- 点击标题栏的 **语言按钮**可选择 **跟随 VS Code / 中文 / English**，选择会全局保存并立即更新导入、导出、模板和语言相关界面
+- 点击标题栏的 **语言按钮**可选择 **跟随 VS Code / 中文 / English**，选择会全局保存并立即更新树菜单、连接与节点操作、搜索、通知、导入导出、模板和已打开的详情面板；“跟随 VS Code”按 `vscode.env.language` 解析当前显示语言
 
 ### 节点管理
 
@@ -166,7 +166,7 @@ ZK_VIEWER_USE_MOCK=1 code .        # PowerShell: $env:ZK_VIEWER_USE_MOCK="1"; co
 | `zkViewer.exportNodeData` / `exportSubtreeData` | 导出单节点 / 完整子树数据 |
 | `zkViewer.importNodeData` | 从导出 JSON 恢复节点数据 |
 | `zkViewer.openImportFormat` | 查看只读导入格式并下载标准模板 |
-| `zkViewer.setLanguage` | 选择相关界面的中文 / 英文显示模式 |
+| `zkViewer.setLanguage` | 选择整个扩展界面的中文 / 英文显示模式 |
 | `zkViewer.openNodeDetail` | 打开详情面板 |
 | `zkViewer.setTreeSort` | 选择节点排序方式 |
 

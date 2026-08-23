@@ -16,6 +16,17 @@ describe('import/export messages', () => {
     assert.strictEqual(messages.openImportFormatButton, '查看导入格式...');
     assert.strictEqual(messages.downloadTemplateButton, '下载标准模板');
     assert.strictEqual(messages.languageButton, '设置语言...');
+    assert.strictEqual(messages.connection.selectConnection, '选择连接');
+    assert.strictEqual(messages.search.modeLabels.contains, '路径包含（例如 168）');
+    assert.strictEqual(messages.node.typeLabels.EPHEMERAL, '临时节点');
+    assert.strictEqual(messages.sort.labels.ctime, '创建时间（从早到晚）');
+    assert.strictEqual(messages.detail.informationHeading, '节点信息');
+    assert.strictEqual(messages.detail.wrapOn, '换行：开');
+    assert.strictEqual(messages.detail.edit, '编辑');
+    assert.strictEqual(
+      messages.importValidationFailure('invalid-or-duplicate-path', '/other'),
+      '节点路径超出导出根路径、格式无效或重复：/other',
+    );
     assert.match(messages.importSuccess({ created: 2, updated: 1, skipped: 0 }), /已导入/);
     assert.match(messages.exportProgress('/app', true), /正在导出/);
   });
@@ -27,5 +38,11 @@ describe('import/export messages', () => {
     assert.strictEqual(getImportExportMessages('en').openImportFormatButton, 'View Import Format...');
     assert.strictEqual(getImportExportMessages('en').downloadTemplateButton, 'Download Standard Template');
     assert.strictEqual(getImportExportMessages('en').languageButton, 'Set Language...');
+    assert.strictEqual(getImportExportMessages('en').connection.selectConnection, 'Select a connection');
+    assert.strictEqual(getImportExportMessages('en').detail.save, 'Save');
+    assert.strictEqual(
+      getImportExportMessages('en').importValidationFailure('missing-parent', '/outside'),
+      'The external parent node does not exist: /outside',
+    );
   });
 });

@@ -19,17 +19,41 @@
   "activationEvents": [
     "onView:zkViewer.tree",
     "onCommand:zkViewer.connect",
+    "onCommand:zkViewer.connect.zh",
+    "onCommand:zkViewer.connect.en",
     "onCommand:zkViewer.disconnect",
+    "onCommand:zkViewer.disconnect.zh",
+    "onCommand:zkViewer.disconnect.en",
     "onCommand:zkViewer.addConnection",
+    "onCommand:zkViewer.addConnection.zh",
+    "onCommand:zkViewer.addConnection.en",
     "onCommand:zkViewer.editConnection",
+    "onCommand:zkViewer.editConnection.zh",
+    "onCommand:zkViewer.editConnection.en",
     "onCommand:zkViewer.removeConnection",
+    "onCommand:zkViewer.removeConnection.zh",
+    "onCommand:zkViewer.removeConnection.en",
     "onCommand:zkViewer.refresh",
+    "onCommand:zkViewer.refresh.zh",
+    "onCommand:zkViewer.refresh.en",
     "onCommand:zkViewer.search",
+    "onCommand:zkViewer.search.zh",
+    "onCommand:zkViewer.search.en",
     "onCommand:zkViewer.gotoPath",
+    "onCommand:zkViewer.gotoPath.zh",
+    "onCommand:zkViewer.gotoPath.en",
     "onCommand:zkViewer.addNode",
+    "onCommand:zkViewer.addNode.zh",
+    "onCommand:zkViewer.addNode.en",
     "onCommand:zkViewer.editNode",
+    "onCommand:zkViewer.editNode.zh",
+    "onCommand:zkViewer.editNode.en",
     "onCommand:zkViewer.deleteNode",
+    "onCommand:zkViewer.deleteNode.zh",
+    "onCommand:zkViewer.deleteNode.en",
     "onCommand:zkViewer.copyPath",
+    "onCommand:zkViewer.copyPath.zh",
+    "onCommand:zkViewer.copyPath.en",
     "onCommand:zkViewer.exportNodeData",
     "onCommand:zkViewer.exportNodeData.zh",
     "onCommand:zkViewer.exportNodeData.en",
@@ -46,8 +70,14 @@
     "onCommand:zkViewer.setLanguage.zh",
     "onCommand:zkViewer.setLanguage.en",
     "onCommand:zkViewer.openNodeDetail",
+    "onCommand:zkViewer.openNodeDetail.zh",
+    "onCommand:zkViewer.openNodeDetail.en",
     "onCommand:zkViewer.setTreeSort",
-    "onCommand:zkViewer.searchSubtree"
+    "onCommand:zkViewer.setTreeSort.zh",
+    "onCommand:zkViewer.setTreeSort.en",
+    "onCommand:zkViewer.searchSubtree",
+    "onCommand:zkViewer.searchSubtree.zh",
+    "onCommand:zkViewer.searchSubtree.en"
   ],
   "contributes": {
     "viewsContainers": {
@@ -63,7 +93,7 @@
       "zkViewer": [
         {
           "id": "zkViewer.tree",
-          "name": "ZooKeeper Nodes",
+          "name": "%view.tree.name%",
           "icon": "media/zk.svg"
         }
       ]
@@ -71,66 +101,196 @@
     "commands": [
       {
         "command": "zkViewer.connect",
+        "title": "%command.connect.title%",
+        "category": "ZooKeeper",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "zkViewer.connect.zh",
+        "title": "连接",
+        "category": "ZooKeeper",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "zkViewer.connect.en",
         "title": "Connect",
         "category": "ZooKeeper",
         "icon": "$(plug)"
       },
       {
         "command": "zkViewer.disconnect",
+        "title": "%command.disconnect.title%",
+        "category": "ZooKeeper",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "zkViewer.disconnect.zh",
+        "title": "断开连接",
+        "category": "ZooKeeper",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "zkViewer.disconnect.en",
         "title": "Disconnect",
         "category": "ZooKeeper",
         "icon": "$(debug-disconnect)"
       },
       {
         "command": "zkViewer.addConnection",
+        "title": "%command.addConnection.title%",
+        "category": "ZooKeeper",
+        "icon": "$(add)"
+      },
+      {
+        "command": "zkViewer.addConnection.zh",
+        "title": "新增连接...",
+        "category": "ZooKeeper",
+        "icon": "$(add)"
+      },
+      {
+        "command": "zkViewer.addConnection.en",
         "title": "Add Connection...",
         "category": "ZooKeeper",
         "icon": "$(add)"
       },
       {
         "command": "zkViewer.editConnection",
+        "title": "%command.editConnection.title%",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.editConnection.zh",
+        "title": "编辑连接...",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.editConnection.en",
         "title": "Edit Connection...",
         "category": "ZooKeeper"
       },
       {
         "command": "zkViewer.removeConnection",
+        "title": "%command.removeConnection.title%",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.removeConnection.zh",
+        "title": "删除连接...",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.removeConnection.en",
         "title": "Remove Connection...",
         "category": "ZooKeeper"
       },
       {
         "command": "zkViewer.refresh",
+        "title": "%command.refresh.title%",
+        "category": "ZooKeeper",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "zkViewer.refresh.zh",
+        "title": "刷新",
+        "category": "ZooKeeper",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "zkViewer.refresh.en",
         "title": "Refresh",
         "category": "ZooKeeper",
         "icon": "$(refresh)"
       },
       {
         "command": "zkViewer.search",
+        "title": "%command.search.title%",
+        "category": "ZooKeeper",
+        "icon": "$(search)"
+      },
+      {
+        "command": "zkViewer.search.zh",
+        "title": "搜索节点...",
+        "category": "ZooKeeper",
+        "icon": "$(search)"
+      },
+      {
+        "command": "zkViewer.search.en",
         "title": "Search Nodes...",
         "category": "ZooKeeper",
         "icon": "$(search)"
       },
       {
         "command": "zkViewer.gotoPath",
+        "title": "%command.gotoPath.title%",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.gotoPath.zh",
+        "title": "跳转到路径...",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.gotoPath.en",
         "title": "Go to Path...",
         "category": "ZooKeeper"
       },
       {
         "command": "zkViewer.addNode",
+        "title": "%command.addNode.title%",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.addNode.zh",
+        "title": "新增节点...",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.addNode.en",
         "title": "Add Node...",
         "category": "ZooKeeper"
       },
       {
         "command": "zkViewer.editNode",
+        "title": "%command.editNode.title%",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.editNode.zh",
+        "title": "编辑节点数据",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.editNode.en",
         "title": "Edit Node Data",
         "category": "ZooKeeper"
       },
       {
         "command": "zkViewer.deleteNode",
+        "title": "%command.deleteNode.title%",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.deleteNode.zh",
+        "title": "删除节点",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.deleteNode.en",
         "title": "Delete Node",
         "category": "ZooKeeper"
       },
       {
         "command": "zkViewer.copyPath",
+        "title": "%command.copyPath.title%",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.copyPath.zh",
+        "title": "复制路径",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.copyPath.en",
         "title": "Copy Path",
         "category": "ZooKeeper"
       },
@@ -220,17 +380,49 @@
       },
       {
         "command": "zkViewer.openNodeDetail",
+        "title": "%command.openNodeDetail.title%",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.openNodeDetail.zh",
+        "title": "打开详情",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.openNodeDetail.en",
         "title": "Open Details",
         "category": "ZooKeeper"
       },
       {
         "command": "zkViewer.setTreeSort",
+        "title": "%command.setTreeSort.title%",
+        "category": "ZooKeeper",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "zkViewer.setTreeSort.zh",
+        "title": "节点排序...",
+        "category": "ZooKeeper",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "zkViewer.setTreeSort.en",
         "title": "Sort Nodes...",
         "category": "ZooKeeper",
         "icon": "$(sort-precedence)"
       },
       {
         "command": "zkViewer.searchSubtree",
+        "title": "%command.searchSubtree.title%",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.searchSubtree.zh",
+        "title": "在此子树中搜索...",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.searchSubtree.en",
         "title": "Search in this subtree...",
         "category": "ZooKeeper"
       }
@@ -238,53 +430,93 @@
     "menus": {
       "view/title": [
         {
-          "command": "zkViewer.addConnection",
-          "when": "view == zkViewer.tree",
+          "command": "zkViewer.addConnection.zh",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == zh-cn",
           "group": "navigation@1"
         },
         {
-          "command": "zkViewer.search",
-          "when": "view == zkViewer.tree",
+          "command": "zkViewer.addConnection.en",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == en",
+          "group": "navigation@1"
+        },
+        {
+          "command": "zkViewer.search.zh",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == zh-cn",
           "group": "navigation@2"
         },
         {
-          "command": "zkViewer.refresh",
-          "when": "view == zkViewer.tree && zkViewer:connected == true",
+          "command": "zkViewer.search.en",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == en",
+          "group": "navigation@2"
+        },
+        {
+          "command": "zkViewer.refresh.zh",
+          "when": "view == zkViewer.tree && zkViewer.connected == true && zkViewer:uiLanguage == zh-cn",
           "group": "navigation@3"
         },
         {
-          "command": "zkViewer.connect",
-          "when": "view == zkViewer.tree && zkViewer:connected == false",
+          "command": "zkViewer.refresh.en",
+          "when": "view == zkViewer.tree && zkViewer.connected == true && zkViewer:uiLanguage == en",
+          "group": "navigation@3"
+        },
+        {
+          "command": "zkViewer.connect.zh",
+          "when": "view == zkViewer.tree && zkViewer.connected == false && zkViewer:uiLanguage == zh-cn",
           "group": "navigation@4"
         },
         {
-          "command": "zkViewer.disconnect",
-          "when": "view == zkViewer.tree && zkViewer:connected == true",
+          "command": "zkViewer.connect.en",
+          "when": "view == zkViewer.tree && zkViewer.connected == false && zkViewer:uiLanguage == en",
+          "group": "navigation@4"
+        },
+        {
+          "command": "zkViewer.disconnect.zh",
+          "when": "view == zkViewer.tree && zkViewer.connected == true && zkViewer:uiLanguage == zh-cn",
           "group": "navigation@5"
         },
         {
-          "command": "zkViewer.editConnection",
-          "when": "view == zkViewer.tree",
+          "command": "zkViewer.disconnect.en",
+          "when": "view == zkViewer.tree && zkViewer.connected == true && zkViewer:uiLanguage == en",
+          "group": "navigation@5"
+        },
+        {
+          "command": "zkViewer.editConnection.zh",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == zh-cn",
           "group": "zoo@1"
         },
         {
-          "command": "zkViewer.removeConnection",
-          "when": "view == zkViewer.tree",
+          "command": "zkViewer.editConnection.en",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == en",
+          "group": "zoo@1"
+        },
+        {
+          "command": "zkViewer.removeConnection.zh",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == zh-cn",
           "group": "zoo@2"
         },
         {
-          "command": "zkViewer.setTreeSort",
-          "when": "view == zkViewer.tree",
+          "command": "zkViewer.removeConnection.en",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == en",
+          "group": "zoo@2"
+        },
+        {
+          "command": "zkViewer.setTreeSort.zh",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == zh-cn",
+          "group": "zoo@3"
+        },
+        {
+          "command": "zkViewer.setTreeSort.en",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == en",
           "group": "zoo@3"
         },
         {
           "command": "zkViewer.importNodeData.zh",
-          "when": "view == zkViewer.tree && zkViewer:connected == true && zkViewer:uiLanguage == zh-cn",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == zh-cn",
           "group": "zoo@4"
         },
         {
           "command": "zkViewer.importNodeData.en",
-          "when": "view == zkViewer.tree && zkViewer:connected == true && zkViewer:uiLanguage == en",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == en",
           "group": "zoo@4"
         },
         {
@@ -310,28 +542,53 @@
       ],
       "view/item/context": [
         {
-          "command": "zkViewer.openNodeDetail",
-          "when": "view == zkViewer.tree && viewItem == znode",
+          "command": "zkViewer.openNodeDetail.zh",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == zh-cn",
           "group": "inline@1"
         },
         {
-          "command": "zkViewer.addNode",
-          "when": "view == zkViewer.tree && viewItem == znode",
+          "command": "zkViewer.openNodeDetail.en",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == en",
+          "group": "inline@1"
+        },
+        {
+          "command": "zkViewer.addNode.zh",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == zh-cn",
           "group": "zoo@1"
         },
         {
-          "command": "zkViewer.editNode",
-          "when": "view == zkViewer.tree && viewItem == znode",
+          "command": "zkViewer.addNode.en",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == en",
+          "group": "zoo@1"
+        },
+        {
+          "command": "zkViewer.editNode.zh",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == zh-cn",
           "group": "zoo@2"
         },
         {
-          "command": "zkViewer.deleteNode",
-          "when": "view == zkViewer.tree && viewItem == znode",
+          "command": "zkViewer.editNode.en",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == en",
+          "group": "zoo@2"
+        },
+        {
+          "command": "zkViewer.deleteNode.zh",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == zh-cn",
           "group": "zoo@3"
         },
         {
-          "command": "zkViewer.copyPath",
-          "when": "view == zkViewer.tree && viewItem == znode",
+          "command": "zkViewer.deleteNode.en",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == en",
+          "group": "zoo@3"
+        },
+        {
+          "command": "zkViewer.copyPath.zh",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == zh-cn",
+          "group": "zoo@4"
+        },
+        {
+          "command": "zkViewer.copyPath.en",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == en",
           "group": "zoo@4"
         },
         {
@@ -355,55 +612,265 @@
           "group": "zoo@6"
         },
         {
-          "command": "zkViewer.refresh",
-          "when": "view == zkViewer.tree && viewItem == znode",
+          "command": "zkViewer.refresh.zh",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == zh-cn",
           "group": "zoo@8"
         },
         {
-          "command": "zkViewer.searchSubtree",
-          "when": "view == zkViewer.tree && viewItem == znode",
+          "command": "zkViewer.refresh.en",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == en",
+          "group": "zoo@8"
+        },
+        {
+          "command": "zkViewer.searchSubtree.zh",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == zh-cn",
+          "group": "zoo@9"
+        },
+        {
+          "command": "zkViewer.searchSubtree.en",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == en",
           "group": "zoo@9"
         }
       ],
       "commandPalette": [
         {
           "command": "zkViewer.importNodeData.zh",
-          "when": "false"
+          "when": "zkViewer:uiLanguage == zh-cn"
         },
         {
           "command": "zkViewer.importNodeData.en",
-          "when": "false"
+          "when": "zkViewer:uiLanguage == en"
         },
         {
           "command": "zkViewer.exportNodeData.zh",
-          "when": "false"
+          "when": "zkViewer:uiLanguage == zh-cn"
         },
         {
           "command": "zkViewer.exportNodeData.en",
-          "when": "false"
+          "when": "zkViewer:uiLanguage == en"
         },
         {
           "command": "zkViewer.exportSubtreeData.zh",
-          "when": "false"
+          "when": "zkViewer:uiLanguage == zh-cn"
         },
         {
           "command": "zkViewer.exportSubtreeData.en",
-          "when": "false"
+          "when": "zkViewer:uiLanguage == en"
         },
         {
           "command": "zkViewer.openImportFormat.zh",
-          "when": "false"
+          "when": "zkViewer:uiLanguage == zh-cn"
         },
         {
           "command": "zkViewer.openImportFormat.en",
-          "when": "false"
+          "when": "zkViewer:uiLanguage == en"
         },
         {
           "command": "zkViewer.setLanguage.zh",
-          "when": "false"
+          "when": "zkViewer:uiLanguage == zh-cn"
         },
         {
           "command": "zkViewer.setLanguage.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.connect.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.connect.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.disconnect.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.disconnect.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.addConnection.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.addConnection.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.editConnection.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.editConnection.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.removeConnection.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.removeConnection.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.refresh.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.refresh.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.search.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.search.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.gotoPath.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.gotoPath.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.addNode.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.addNode.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.editNode.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.editNode.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.deleteNode.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.deleteNode.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.copyPath.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.copyPath.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.openNodeDetail.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.openNodeDetail.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.setTreeSort.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.setTreeSort.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.searchSubtree.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.searchSubtree.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.connect",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.disconnect",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.addConnection",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.editConnection",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.removeConnection",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.refresh",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.search",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.gotoPath",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.addNode",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.editNode",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.deleteNode",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.copyPath",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.exportNodeData",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.exportSubtreeData",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.importNodeData",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.openImportFormat",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.setLanguage",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.openNodeDetail",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.setTreeSort",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.searchSubtree",
           "when": "false"
         }
       ]
@@ -414,37 +881,49 @@
         "zkViewer.sessionTimeout": {
           "type": "number",
           "default": 10000,
-          "description": "ZooKeeper session timeout in milliseconds."
+          "description": "%configuration.sessionTimeout.description%"
         },
         "zkViewer.maxReconnectAttempts": {
           "type": "number",
           "default": 3,
-          "description": "Maximum automatic reconnect attempts before giving up."
+          "description": "%configuration.maxReconnectAttempts.description%"
         },
         "zkViewer.reconnectDelayMs": {
           "type": "number",
           "default": 2000,
-          "description": "Delay between reconnect attempts in milliseconds."
+          "description": "%configuration.reconnectDelayMs.description%"
         },
         "zkViewer.maxSearchNodes": {
           "type": "number",
           "default": 500000,
-          "description": "Safety cap on the number of nodes visited during a single search (0 = unlimited). When the cap is reached the result list warns that it may be incomplete."
+          "description": "%configuration.maxSearchNodes.description%"
         },
         "zkViewer.maxNodeDataBytes": {
           "type": "number",
           "default": 0,
-          "description": "Content search: skip nodes whose data exceeds this size in bytes (0 = no limit, complete results but slower)."
+          "description": "%configuration.maxNodeDataBytes.description%"
         },
         "zkViewer.treeSort": {
           "type": "string",
-          "enum": ["name", "name-desc", "ctime", "ctime-desc", "mtime", "mtime-desc", "none"],
+          "enum": [
+            "name",
+            "name-desc",
+            "ctime",
+            "ctime-desc",
+            "mtime",
+            "mtime-desc",
+            "none"
+          ],
           "default": "name",
-          "description": "Sort order for child nodes: by name, creation time or modification time (each ascending or descending), or keep the server order."
+          "description": "%configuration.treeSort.description%"
         },
         "zkViewer.uiLanguage": {
           "type": "string",
-          "enum": ["auto", "zh-cn", "en"],
+          "enum": [
+            "auto",
+            "zh-cn",
+            "en"
+          ],
           "default": "auto",
           "scope": "application",
           "description": "%configuration.uiLanguage.description%"
@@ -453,7 +932,7 @@
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "Development/testing only: use the in-memory mock ZooKeeper client instead of a real connection."
+          "description": "%configuration.dev.useMockClient.description%"
         }
       }
     }

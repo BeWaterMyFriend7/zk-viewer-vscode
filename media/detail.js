@@ -10,9 +10,15 @@
   const compactJsonButton = document.getElementById('compact-json');
   const status = document.getElementById('status');
   const statBox = document.getElementById('stat');
+  const statHeading = document.getElementById('stat-heading');
+  const dataHeading = document.getElementById('data-heading');
+  const displayLabel = document.querySelector('.toolbar-label');
+  const displayModeGroup = document.querySelector('.segmented-control');
+  const eyebrow = document.querySelector('.eyebrow');
 
   let currentPath;
   let currentVersion;
+  let currentStat;
   let currentKind = 'text';
   let currentDisplayMode = 'json';
   let draftText = '';
@@ -20,6 +26,33 @@
   let dataEditable = false;
   let editing = false;
   let wrapEnabled = true;
+  let messages = window['zkViewerDetailMessages'];
+
+  function formatMessage(template, replacements) {
+    return Object.entries(replacements).reduce(
+      (result, [key, value]) => result.replace(`{${key}}`, String(value)),
+      template,
+    );
+  }
+
+  function applyLanguage(nextMessages) {
+    messages = nextMessages;
+    document.documentElement.lang = messages.htmlLanguage;
+    document.title = messages.documentTitle;
+    eyebrow.textContent = messages.eyebrow;
+    statHeading.textContent = messages.informationHeading;
+    dataHeading.textContent = messages.dataHeading;
+    displayLabel.textContent = messages.displayLabel;
+    displayModeGroup.setAttribute('aria-label', messages.displayModeAria);
+    dataInput.setAttribute('placeholder', messages.dataPlaceholder);
+    editButton.textContent = messages.edit;
+    saveButton.textContent = messages.save;
+    compactJsonButton.textContent = messages.minifyJson;
+    toggleWrapButton.textContent = wrapEnabled ? messages.wrapOn : messages.wrapOff;
+    if (currentPath) {
+      normalStatus();
+    }
+  }
 
   function showStatus(message, error) {
     status.textContent = message;
@@ -38,11 +71,11 @@
 
   function normalStatus() {
     if (!dataEditable) {
-      showStatus(currentKind + ' (read-only)', false);
+      showStatus(formatMessage(messages.kindReadOnly, { kind: currentKind }), false);
     } else if (editing) {
-      showStatus('Editing — changes apply on Save', false);
+      showStatus(messages.editingStatus, false);
     } else {
-      showStatus('Read-only — click Edit to modify', false);
+      showStatus(messages.readOnlyStatus, false);
     }
   }
 
@@ -131,7 +164,12 @@
     } catch (error) {
       dataInput.value = draftText;
       lastRenderedText = dataInput.value;
-      showStatus('Invalid JSON: ' + (error instanceof Error ? error.message : String(error)), true);
+      showStatus(
+        formatMessage(messages.invalidJson, {
+          detail: error instanceof Error ? error.message : String(error),
+        }),
+        true,
+      );
     }
   }
 
@@ -145,7 +183,12 @@
         return true;
       } catch (error) {
         draftText = dataInput.value;
-        showStatus('Invalid JSON: ' + (error instanceof Error ? error.message : String(error)), true);
+        showStatus(
+          formatMessage(messages.invalidJson, {
+            detail: error instanceof Error ? error.message : String(error),
+          }),
+          true,
+        );
         return false;
       }
     }
@@ -186,15 +229,21 @@
       mzxid: stat.mzxid,
     };
     statBox.innerHTML = Object.entries(fields)
-      .map(([key, value]) => `<span><b>${key}</b>: ${value}</span>`)
+      .map(([key, value]) => `<span><b>${messages.statLabels[key] ?? key}</b>: ${value}</span>`)
       .join('');
   }
 
   window.addEventListener('message', (event) => {
     const message = event.data;
-    if (message.type === 'loadData') {
+    if (message.type === 'languageChanged') {
+      applyLanguage(message.messages);
+      if (currentStat) {
+        renderStat(currentStat);
+      }
+    } else if (message.type === 'loadData') {
       currentPath = message.path;
       currentVersion = message.stat.version;
+      currentStat = message.stat;
       currentKind = message.kind;
       dataEditable = message.editable;
       draftText = message.dataText;
@@ -207,9 +256,9 @@
       renderStat(message.stat);
     } else if (message.type === 'saved') {
       setEditing(false);
-      showStatus('Saved at version ' + currentVersion, false);
+      showStatus(formatMessage(messages.savedAtVersion, { version: currentVersion }), false);
     } else if (message.type === 'error') {
-      showStatus('Error: ' + message.message, true);
+      showStatus(formatMessage(messages.error, { detail: message.message }), true);
     }
   });
 
@@ -240,7 +289,7 @@
     wrapEnabled = !wrapEnabled;
     dataInput.wrap = wrapEnabled ? 'soft' : 'off';
     dataInput.classList.toggle('no-wrap', !wrapEnabled);
-    toggleWrapButton.textContent = wrapEnabled ? 'Wrap: On' : 'Wrap: Off';
+    toggleWrapButton.textContent = wrapEnabled ? messages.wrapOn : messages.wrapOff;
     toggleWrapButton.setAttribute('aria-pressed', String(wrapEnabled));
   });
 
@@ -250,9 +299,14 @@
       currentDisplayMode = 'text';
       updateDisplayButtons();
       renderDraft();
-      showStatus('JSON whitespace removed; string content was preserved', false);
+      showStatus(messages.minifySuccess, false);
     } catch (error) {
-      showStatus('Cannot minify invalid JSON: ' + (error instanceof Error ? error.message : String(error)), true);
+      showStatus(
+        formatMessage(messages.minifyInvalid, {
+          detail: error instanceof Error ? error.message : String(error),
+        }),
+        true,
+      );
     }
   });
 })();
