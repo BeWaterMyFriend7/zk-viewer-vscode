@@ -1,5 +1,8 @@
 {
   "command.exportNodeData.title": "Export Node Data...",
   "command.exportSubtreeData.title": "Export Node and Descendant Data...",
-  "command.importNodeData.title": "Import Node Data..."
+  "command.importNodeData.title": "Import Node Data...",
+  "command.openImportFormat.title": "View Import Format",
+  "command.setLanguage.title": "UI Language",
+  "configuration.uiLanguage.description": "Language for import, export, template, and language controls. Auto follows the VS Code display language."
 }

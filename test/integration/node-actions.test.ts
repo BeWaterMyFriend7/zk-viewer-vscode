@@ -251,4 +251,42 @@ suite('Node actions (mock)', () => {
       await vscode.commands.executeCommand('zkViewer.disconnect');
     }
   });
+
+  test('rejects a non-standard import document before changing ZooKeeper', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/sentinel', Buffer.from('unchanged'), 'PERSISTENT');
+
+    const invalidUri = vscode.Uri.file(path.join(os.tmpdir(), `zk-viewer-invalid-import-${Date.now()}.json`));
+    const invalidDocument = {
+      format: 'zk-viewer-node-data',
+      version: 1,
+      rootPath: '/invalid',
+      recursive: false,
+      nodes: [{ path: '/invalid', data: 'must not be written', encoding: 'utf8' }],
+      customMapping: { pathField: 'name' },
+    };
+    try {
+      await vscode.workspace.fs.writeFile(invalidUri, Buffer.from(JSON.stringify(invalidDocument), 'utf8'));
+      const result = await vscode.commands.executeCommand('zkViewer.importNodeData', {
+        sourceUri: invalidUri,
+        conflictPolicy: 'overwrite',
+      });
+
+      assert.strictEqual(result, undefined);
+      assert.strictEqual((await mock.getData('/sentinel')).data.toString(), 'unchanged');
+      assert.strictEqual(await mock.exists('/invalid'), false);
+      assert.deepStrictEqual(await mock.getChildren('/'), ['sentinel']);
+    } finally {
+      try {
+        await vscode.workspace.fs.delete(invalidUri);
+      } catch {
+        // The assertion already reports a missing fixture more clearly.
+      }
+      await vscode.commands.executeCommand('zkViewer.disconnect');
+    }
+  });
 });

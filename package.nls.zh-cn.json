@@ -1,5 +1,8 @@
 {
   "command.exportNodeData.title": "导出节点数据...",
   "command.exportSubtreeData.title": "导出节点及所有后代数据...",
-  "command.importNodeData.title": "导入节点数据..."
+  "command.importNodeData.title": "导入节点数据...",
+  "command.openImportFormat.title": "查看导入格式",
+  "command.setLanguage.title": "界面语言",
+  "configuration.uiLanguage.description": "导入、导出、模板和语言控件所使用的语言；自动模式跟随 VS Code 显示语言。"
 }

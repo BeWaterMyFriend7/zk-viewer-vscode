@@ -22,12 +22,20 @@ import {
   type ImportConflictPolicy,
   type NodeDataImportResult,
 } from './commands/import-node-data';
+import { createImportTemplateDocument, IMPORT_TEMPLATE_FILE_NAME } from './commands/import-template';
 import { deleteNodeRecursively, validateNodeName } from './commands/node-commands';
-import { getImportExportMessages } from './i18n/import-export-messages';
+import {
+  getImportExportMessages,
+  resolveUiLanguage,
+  type ImportExportMessages,
+  type UiLanguage,
+  type UiLanguagePreference,
+} from './i18n/import-export-messages';
 import { log } from './log/activity-log';
 import { isSearchOptions, searchNodes, type SearchOptions, type SearchOutcome } from './search/node-search';
 import { resolvePath } from './search/path-resolver';
 import { NodeTreeProvider, revealPathInTree, type ZkNode } from './tree/node-tree-provider';
+import { ImportTemplatePanel } from './webview/import-template-panel';
 import { NodeDetailPanel } from './webview/node-detail-panel';
 import { TREE_SORT_ORDERS, type TreeSortOrder } from './tree/node-tree';
 import { MockZkClient } from './zk/mock-zk';
@@ -42,6 +50,8 @@ let treeView: vscode.TreeView<ZkNode>;
 let lastRevealedPath: string | undefined;
 let lastCommandError: string | undefined;
 let extensionContext: vscode.ExtensionContext;
+let appliedUiLanguage: UiLanguage | undefined;
+let uiLanguageUpdateQueue: Promise<void> = Promise.resolve();
 
 const mockClients = new Map<string, MockZkClient>();
 
@@ -82,6 +92,47 @@ function registerCommand(
   handler: (...args: any[]) => unknown,
 ) {
   context.subscriptions.push(vscode.commands.registerCommand(command, handler));
+}
+
+function registerLocalizedCommand(
+  context: vscode.ExtensionContext,
+  command: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: (...args: any[]) => unknown,
+): void {
+  registerCommand(context, command, handler);
+  registerCommand(context, `${command}.zh`, handler);
+  registerCommand(context, `${command}.en`, handler);
+}
+
+function getUiLanguagePreference(): UiLanguagePreference {
+  const preference = vscode.workspace.getConfiguration('zkViewer').get<UiLanguagePreference>('uiLanguage');
+  return preference === 'zh-cn' || preference === 'en' ? preference : 'auto';
+}
+
+function getUiLanguage(): UiLanguage {
+  return resolveUiLanguage(getUiLanguagePreference(), vscode.env.language);
+}
+
+function getUiMessages(): ImportExportMessages {
+  return getImportExportMessages(getUiLanguage());
+}
+
+function updateUiLanguageContext(): Promise<UiLanguage> {
+  const update = uiLanguageUpdateQueue.then(async () => {
+    const language = getUiLanguage();
+    if (language !== appliedUiLanguage) {
+      await vscode.commands.executeCommand('setContext', 'zkViewer:uiLanguage', language);
+      appliedUiLanguage = language;
+      ImportTemplatePanel.refresh(getImportExportMessages(language), language);
+    }
+    return language;
+  });
+  uiLanguageUpdateQueue = update.then(
+    () => undefined,
+    () => undefined,
+  );
+  return update;
 }
 
 function updateUiState(state: string): void {
@@ -633,7 +684,7 @@ async function exportNodeDataCommand(
   recursive: boolean,
   options?: { targetUri?: vscode.Uri },
 ): Promise<NodeDataExport | undefined> {
-  const messages = getImportExportMessages(vscode.env.language);
+  const messages = getUiMessages();
   const client = manager.getClient();
   if (!client) {
     void vscode.window.showInformationMessage(messages.notConnected);
@@ -698,7 +749,7 @@ async function importNodeDataCommand(
   firstArg?: unknown,
   secondArg?: ImportCommandOptions,
 ): Promise<NodeDataImportResult | undefined> {
-  const messages = getImportExportMessages(vscode.env.language);
+  const messages = getUiMessages();
   const client = manager.getClient();
   if (!client) {
     void vscode.window.showInformationMessage(messages.notConnected);
@@ -790,6 +841,106 @@ async function setTreeSortCommand(): Promise<void> {
   void vscode.window.showInformationMessage(`Sorted by: ${picked.label}`);
 }
 
+interface SetLanguageCommandOptions {
+  preference?: UiLanguagePreference;
+  silent?: boolean;
+}
+
+function isSetLanguageCommandOptions(value: unknown): value is SetLanguageCommandOptions {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const preference = (value as SetLanguageCommandOptions).preference;
+  return preference === undefined || preference === 'auto' || preference === 'zh-cn' || preference === 'en';
+}
+
+async function setLanguageCommand(options?: unknown): Promise<UiLanguage | undefined> {
+  const messages = getUiMessages();
+  const current = getUiLanguagePreference();
+  let preference = isSetLanguageCommandOptions(options) ? options.preference : undefined;
+
+  if (!preference) {
+    const picked = await vscode.window.showQuickPick(
+      [
+        {
+          label: messages.followVsCodeLabel,
+          description: current === 'auto' ? messages.currentDescription : messages.followVsCodeDescription,
+          preference: 'auto' as const,
+        },
+        {
+          label: messages.chineseLabel,
+          description: current === 'zh-cn' ? messages.currentDescription : undefined,
+          preference: 'zh-cn' as const,
+        },
+        {
+          label: messages.englishLabel,
+          description: current === 'en' ? messages.currentDescription : undefined,
+          preference: 'en' as const,
+        },
+      ],
+      { placeHolder: messages.languagePrompt },
+    );
+    if (!picked) {
+      return undefined;
+    }
+    preference = picked.preference;
+  }
+
+  await vscode.workspace
+    .getConfiguration('zkViewer')
+    .update('uiLanguage', preference, vscode.ConfigurationTarget.Global);
+  const language = await updateUiLanguageContext();
+  if (!(isSetLanguageCommandOptions(options) && options.silent)) {
+    void vscode.window.showInformationMessage(getUiMessages().languageChanged);
+  }
+  return language;
+}
+
+interface DownloadImportTemplateOptions {
+  targetUri?: vscode.Uri;
+  silent?: boolean;
+}
+
+async function downloadImportTemplateCommand(
+  options?: DownloadImportTemplateOptions,
+): Promise<vscode.Uri | undefined> {
+  const messages = getUiMessages();
+  const defaultBaseUri = vscode.workspace.workspaceFolders?.[0]?.uri ?? extensionContext.globalStorageUri;
+  const targetUri =
+    options?.targetUri ??
+    (await vscode.window.showSaveDialog({
+      title: messages.downloadDialogTitle,
+      saveLabel: messages.downloadSaveLabel,
+      defaultUri: vscode.Uri.joinPath(defaultBaseUri, IMPORT_TEMPLATE_FILE_NAME),
+      filters: { JSON: ['json'] },
+    }));
+  if (!targetUri) {
+    return undefined;
+  }
+
+  try {
+    const content = serializeNodeDataExport(createImportTemplateDocument());
+    await vscode.workspace.fs.writeFile(targetUri, Buffer.from(content, 'utf8'));
+    if (!options?.silent) {
+      void vscode.window.showInformationMessage(messages.downloadSuccess(targetUri.fsPath));
+    }
+    return targetUri;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    lastCommandError = detail;
+    if (!options?.silent) {
+      void vscode.window.showErrorMessage(messages.downloadFailure(detail));
+    }
+    return undefined;
+  }
+}
+
+function openImportFormatCommand(): void {
+  ImportTemplatePanel.open(extensionContext, getUiMessages(), getUiLanguage(), () =>
+    downloadImportTemplateCommand(),
+  );
+}
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   log('zk-viewer-vscode activating');
   extensionContext = context;
@@ -814,6 +965,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   context.subscriptions.push(statusBar);
   updateUiState(manager.getState());
+  await updateUiLanguageContext();
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration('zkViewer.uiLanguage')) {
+        void updateUiLanguageContext();
+      }
+    }),
+  );
 
   if (process.env.ZK_VIEWER_USE_MOCK === '1') {
     (globalThis as { __zkViewerTestApi?: unknown }).__zkViewerTestApi = getTestApi();
@@ -832,15 +991,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerCommand(context, 'zkViewer.editNode', openNodeDetailCommand);
   registerCommand(context, 'zkViewer.deleteNode', deleteNodeCommand);
   registerCommand(context, 'zkViewer.copyPath', copyPathCommand);
-  registerCommand(context, 'zkViewer.exportNodeData', (node?: ZkNode, options?: { targetUri?: vscode.Uri }) =>
-    exportNodeDataCommand(node, false, options),
+  registerLocalizedCommand(
+    context,
+    'zkViewer.exportNodeData',
+    (node?: ZkNode, options?: { targetUri?: vscode.Uri }) => exportNodeDataCommand(node, false, options),
   );
-  registerCommand(
+  registerLocalizedCommand(
     context,
     'zkViewer.exportSubtreeData',
     (node?: ZkNode, options?: { targetUri?: vscode.Uri }) => exportNodeDataCommand(node, true, options),
   );
-  registerCommand(context, 'zkViewer.importNodeData', importNodeDataCommand);
+  registerLocalizedCommand(context, 'zkViewer.importNodeData', importNodeDataCommand);
+  registerLocalizedCommand(context, 'zkViewer.openImportFormat', openImportFormatCommand);
+  registerLocalizedCommand(context, 'zkViewer.setLanguage', setLanguageCommand);
+  registerCommand(context, 'zkViewer.downloadImportTemplate', downloadImportTemplateCommand);
   registerCommand(context, 'zkViewer.openNodeDetail', openNodeDetailCommand);
   registerCommand(context, 'zkViewer.setTreeSort', setTreeSortCommand);
   registerCommand(context, 'zkViewer.searchSubtree', searchSubtreeCommand);

@@ -104,6 +104,11 @@ describe('node data import', () => {
         ],
       },
       { ...valid, nodes: [{ path: '/app', data: '***not-base64***', encoding: 'base64' }] },
+      { ...valid, customMapping: { pathField: 'name' } },
+      {
+        ...valid,
+        nodes: [{ path: '/app', data: 'root', encoding: 'utf8', metadata: { owner: 'custom' } }],
+      },
       {
         ...valid,
         recursive: false,

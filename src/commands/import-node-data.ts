@@ -18,8 +18,15 @@ export interface NodeDataImportResult {
   skipped: number;
 }
 
+const DOCUMENT_FIELDS = new Set(['format', 'version', 'rootPath', 'recursive', 'nodes']);
+const NODE_FIELDS = new Set(['path', 'data', 'encoding']);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function hasOnlyFields(value: Record<string, unknown>, allowed: ReadonlySet<string>): boolean {
+  return Object.keys(value).every((key) => allowed.has(key));
 }
 
 function isNormalizedPath(path: string): boolean {
@@ -45,6 +52,7 @@ export function parseNodeDataImport(text: string): NodeDataImport {
   const value: unknown = JSON.parse(text);
   if (
     !isRecord(value) ||
+    !hasOnlyFields(value, DOCUMENT_FIELDS) ||
     value.format !== 'zk-viewer-node-data' ||
     value.version !== 1 ||
     typeof value.rootPath !== 'string' ||
@@ -62,6 +70,7 @@ export function parseNodeDataImport(text: string): NodeDataImport {
   const nodes = value.nodes.map((node): ImportedNodeData => {
     if (
       !isRecord(node) ||
+      !hasOnlyFields(node, NODE_FIELDS) ||
       typeof node.path !== 'string' ||
       !isNormalizedPath(node.path) ||
       typeof node.data !== 'string' ||
