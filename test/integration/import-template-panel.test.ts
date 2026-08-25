@@ -3,12 +3,11 @@ import * as vscode from 'vscode';
 import { createImportTemplateDocument } from '../../src/commands/import-template';
 import { serializeNodeDataExport } from '../../src/commands/export-node-data';
 import { ImportTemplatePanel } from '../../src/webview/import-template-panel';
+import { activateExtension } from './extension-helper';
 
 suite('Import format panel', () => {
   suiteSetup(async () => {
-    const extension = vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode');
-    assert.ok(extension, 'extension should be installed');
-    await extension.activate();
+    await activateExtension();
   });
 
   test('shows the canonical template as read-only content', async () => {

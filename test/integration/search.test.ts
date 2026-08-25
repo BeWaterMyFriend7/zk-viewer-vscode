@@ -2,14 +2,13 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import type * as ext from '../../src/extension';
 import { isSearchOptions, type SearchOutcome } from '../../src/search/node-search';
+import { activateExtension } from './extension-helper';
 
 suite('Search and navigation (mock)', () => {
   let api: ReturnType<typeof ext.getTestApi>;
 
   suiteSetup(async () => {
-    const extension = vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode');
-    assert.ok(extension);
-    await extension?.activate();
+    await activateExtension();
     const testApi = (globalThis as { __zkViewerTestApi?: ReturnType<typeof ext.getTestApi> })
       .__zkViewerTestApi;
     assert.ok(testApi);

@@ -1,14 +1,13 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import type * as ext from '../../src/extension';
+import { activateExtension } from './extension-helper';
 
 suite('Detail panel (mock)', () => {
   let api: ReturnType<typeof ext.getTestApi>;
 
   suiteSetup(async () => {
-    const extension = vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode');
-    assert.ok(extension);
-    await extension?.activate();
+    await activateExtension();
     const testApi = (globalThis as { __zkViewerTestApi?: ReturnType<typeof ext.getTestApi> })
       .__zkViewerTestApi;
     assert.ok(testApi);

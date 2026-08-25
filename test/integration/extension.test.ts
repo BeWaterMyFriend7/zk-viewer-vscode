@@ -1,22 +1,16 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { getImportExportMessages, resolveUiLanguage } from '../../src/i18n/import-export-messages';
+import { activateExtension, getExtension } from './extension-helper';
 
 suite('Extension smoke', () => {
   test('extension activates', async () => {
-    const ids = vscode.extensions.all.map((e) => e.id);
-    const ext =
-      vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode') ??
-      vscode.extensions.all.find((e) => e.id.toLowerCase().includes('zk-viewer'));
-    assert.ok(ext, `extension should be installed. Available: ${ids.join(', ')}`);
-    await ext?.activate();
-    assert.ok(ext?.isActive, 'extension should be active');
+    const ext = await activateExtension();
+    assert.ok(ext.isActive, 'extension should be active');
   });
 
   test('all contributed commands are registered', async () => {
-    const ext =
-      vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode') ??
-      vscode.extensions.all.find((e) => e.id.toLowerCase().includes('zk-viewer'));
+    const ext = getExtension();
     const manifest = ext?.packageJSON as
       { contributes?: { commands?: Array<{ command: string }> } } | undefined;
     const contributed = manifest?.contributes?.commands ?? [];
@@ -28,7 +22,7 @@ suite('Extension smoke', () => {
   });
 
   test('tree context menus contribute node actions', async () => {
-    const manifest = vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode')?.packageJSON as {
+    const manifest = getExtension().packageJSON as {
       contributes?: {
         menus?: {
           'view/item/context'?: Array<{ command: string; when?: string; group?: string }>;
@@ -81,7 +75,7 @@ suite('Extension smoke', () => {
   });
 
   test('all visible tree actions switch language and global import stays discoverable', () => {
-    const manifest = vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode')?.packageJSON as {
+    const manifest = getExtension().packageJSON as {
       contributes?: {
         menus?: {
           'view/item/context'?: Array<{ command: string; when?: string }>;
@@ -121,7 +115,7 @@ suite('Extension smoke', () => {
   });
 
   test('import and export command titles follow the VS Code display language', () => {
-    const manifest = vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode')?.packageJSON as {
+    const manifest = getExtension().packageJSON as {
       contributes?: { commands?: Array<{ command: string; title: string }> };
     };
     const commands = manifest?.contributes?.commands ?? [];
@@ -189,7 +183,7 @@ suite('Extension smoke', () => {
   });
 
   test('localized aliases can activate on VS Code 1.60 and language is application-scoped', () => {
-    const manifest = vscode.extensions.getExtension('zk-viewer.zk-viewer-vscode')?.packageJSON as {
+    const manifest = getExtension().packageJSON as {
       activationEvents?: string[];
       contributes?: {
         commands?: Array<{ command: string }>;
