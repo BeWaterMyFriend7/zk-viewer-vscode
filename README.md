@@ -1,201 +1,162 @@
-# zk-viewer-vscode
+# ZooKeeper Viewer
 
-ZooKeeper 轻量级可视化 VS Code 插件：在编辑器内完成节点树浏览、搜索、JSON 查看与编辑、节点增删改，无需额外部署 Web 工具。
+在 VS Code 内直接浏览和管理 Apache ZooKeeper。无需额外部署 Web 控制台，即可完成多连接管理、节点搜索、JSON/TXT 查看与编辑、节点增删，以及子树导入导出。
 
-## 功能特性
+> English summary is available in [English](#english).
 
-- **连接管理**：多连接配置、digest 认证（凭据经 VS Code SecretStorage 加密保存）、TLS（`ssl://`）、断线自动重连；侧边栏标题栏一键 **加号新建连接**
-- **节点树**：侧边栏树形浏览（节点树造型活动栏图标），子节点懒加载，持久/顺序/临时节点图标区分，支持按名称 / 创建时间 / 更新时间排序（正序、倒序或服务器顺序，设置或侧边栏菜单切换），右键快捷操作
-- **查询搜索**：侧边栏标题栏 **放大镜快捷搜索**、路径定位（`zkViewer.gotoPath`）、名称前缀 / 路径通配符 / 正则 / 节点内容搜索；遍历并发化，内容搜索自动跳过空数据与超大节点
-- **JSON 查看与编辑**：详情面板展示 stat 与格式化 JSON；支持 JSON / TXT 显示切换、换行开关和安全的一键 JSON 紧凑化；**默认只读，点击 Edit 才进入编辑**，保存带版本号乐观锁（冲突不覆盖）；非 JSON 文本与二进制（十六进制）自动降级
-- **节点操作**：新增（四种节点类型）、编辑、删除（含递归删除与二次确认）、复制路径；可将单节点或完整子树无损导出为 JSON，并从导出文件恢复节点
-- **中英文界面**：树菜单、连接与节点操作、搜索、通知和详情面板均支持中文和英文；可通过标题栏语言按钮选择跟随 VS Code、中文或英文
+![ZooKeeper Viewer feature demo](media/demo.gif)
 
-## 兼容性
+The demo covers the main workflow: connect to ZooKeeper, browse and sort nodes, search by path, inspect and edit JSON data, and import/export node data.
 
-- VS Code `>= 1.60`
-- ZooKeeper `3.4+`
-- Windows / macOS / Linux
+## 为什么使用
+
+- **轻量直达**：从 VS Code 活动栏进入，不切换开发环境
+- **安全连接**：支持多地址、Chroot、digest 认证和 TLS；密码保存在 VS Code SecretStorage 中
+- **高效浏览**：节点按需懒加载，可按名称、创建时间或更新时间排序
+- **完整搜索**：支持精确路径、名称前缀、路径通配符、正则和节点内容搜索
+- **谨慎编辑**：详情默认只读，保存使用 ZooKeeper 版本号校验，冲突时不会覆盖远端数据
+- **便捷迁移**：单节点或完整子树可无损导出为 JSON，并可恢复到 ZooKeeper
+- **中英文界面**：可跟随 VS Code，也可手动切换中文或 English
+
+## 要求
+
+- VS Code `1.60.0` 或更高版本
+- Apache ZooKeeper `3.4` 或更高版本
+- Windows、macOS 或 Linux
 
 ## 安装
 
-### 从 VSIX 安装
+在 VS Code 扩展视图中搜索 **ZooKeeper Viewer**，点击 **安装**；也可以打开 [Visual Studio Marketplace 页面](https://marketplace.visualstudio.com/items?itemName=BeWater.zk-viewer-vscode)。
+
+也可以下载 VSIX 后执行：
 
 ```bash
-npm ci
-npm run package
-code --install-extension dist/zk-viewer-vscode.vsix
+code --install-extension zk-viewer-vscode.vsix
 ```
 
-### 开发模式（Mock，无需真实 ZooKeeper）
+## 快速上手
 
-```bash
-ZK_VIEWER_USE_MOCK=1 code .        # PowerShell: $env:ZK_VIEWER_USE_MOCK="1"; code .
-```
+1. 点击活动栏中的 ZooKeeper 图标。
+2. 点击侧边栏标题栏的 **加号**，填写连接名称和服务器地址，例如 `localhost:2181`。
+3. 点击 **连接**（插头图标）。
+4. 展开节点树；双击节点打开详情，或右键执行新增、删除、复制路径、搜索和导出。
+5. 点击标题栏的 **放大镜**，快速搜索或定位节点。
 
-或在 VS Code 设置中开启 `zkViewer.dev.useMockClient`，然后按 `F5` 启动扩展开发宿主。
-
-## 用户操作手册
-
-### 快速上手
-
-1. 点击活动栏的 ZooKeeper 图标打开侧边栏
-2. 点击侧边栏标题栏的 **加号** 新建连接，配置服务器地址（如 `localhost:2181`）与认证信息
-3. 点击 **连接**（插头图标）建立连接，展开节点树浏览
-4. 右键节点执行新增、删除、复制路径和导出；侧边栏 `ZooKeeper Nodes` 省略号菜单在排序项下方始终提供全局导入（未连接时点击会提示先连接）；双击打开详情面板查看 JSON（只读），点击 **编辑 / Edit** 进入编辑
-5. 点击侧边栏标题栏的 **放大镜**，或在命令面板（`Ctrl+Shift+P`）使用 `ZooKeeper: Search Nodes...` 快速定位
+## 操作手册
 
 ### 连接管理
 
-**新建连接**
-
-点击侧边栏标题栏的 **加号** 或执行 `ZooKeeper: Add Connection...`，按提示填写：
+点击标题栏的 **加号**，或在命令面板中运行 `ZooKeeper: Add Connection...`。
 
 | 字段 | 说明 | 示例 |
 | --- | --- | --- |
-| 连接名称 | 便于识别的别名 | `开发环境` |
-| 主机列表 | 逗号分隔的 `host:port`，可填多个 | `zk1:2181,zk2:2181` |
-| Chroot（可选） | 根路径前缀，进入指定子树 | `/app` |
-| 用户名 / 密码（可选） | digest 认证凭据 | `admin` / `******` |
-| 使用 TLS | 开启后连接串使用 `ssl://` 前缀 | 开启 / 关闭 |
+| 连接名称 | 本地显示的别名 | `开发环境` |
+| 主机列表 | 逗号分隔的 `host:port` | `zk1:2181,zk2:2181` |
+| Chroot | 可选的根路径前缀 | `/app` |
+| 用户名 / 密码 | 可选的 digest 认证凭据 | `admin` / `******` |
+| 使用 TLS | 使用 `ssl://` 连接 | 开启 / 关闭 |
 
-密码经 VS Code 加密存储（SecretStorage），不会写入配置或日志。
+连接配置保存在 VS Code 工作区状态中；密码使用 VS Code SecretStorage 单独加密保存，不会写入普通配置或日志。通过标题栏的省略号菜单可编辑或删除连接，删除连接时也会清除对应密码。
 
-**连接 / 断开**
+网络抖动或会话超时后，扩展会自动尝试重连。可通过 `zkViewer.maxReconnectAttempts` 和 `zkViewer.reconnectDelayMs` 调整次数与间隔。
 
-- 点击标题栏的 **连接**（插头图标）建立连接；已连接时标题栏显示 **断开**（断连图标）
-- 连接状态同步显示在状态栏：`ZK: 已连接` / `ZK: 连接中...` / `ZK: 已断开`
+### 浏览与排序
 
-**编辑 / 删除连接**
-
-点击侧边栏标题栏的 **省略号菜单** 选择 `Edit Connection...` / `Remove Connection...`；删除连接会同时清除其加密保存的密码。
-
-**断线重连**
-
-网络抖动或会话超时后自动重连，次数与间隔通过设置 `zkViewer.maxReconnectAttempts`、`zkViewer.reconnectDelayMs` 调整。
-
-### 浏览节点树
-
-- 点击节点展开子节点，子节点按需懒加载，不会一次拉取整棵树
-- 节点图标区分类型：文件夹（持久）、结构符号（持久顺序）、事件符号（临时）、类符号（临时顺序）
-- 右键节点可执行 **新增节点 / 编辑节点数据 / 删除节点 / 复制路径 / 导出节点数据 / 导出完整子树 / 刷新**
-- 右键节点 → **Search in this subtree...** 可在该节点子树范围内精准搜索（遍历范围小，速度快且结果完整）
-- **排序**：点击侧边栏标题栏 **省略号菜单** 的 `Sort Nodes...`，或修改设置 `zkViewer.treeSort`，支持按名称、创建时间、更新时间正序 / 倒序，以及服务器顺序
+- 展开节点时仅加载当前层级，不会一次读取整棵树。
+- 节点图标区分持久、持久顺序、临时和临时顺序节点。
+- 右键节点可新增、编辑、删除、复制路径、搜索子树、导出和刷新。
+- 在标题栏省略号菜单中选择 `Sort Nodes...`，可按名称、创建时间、更新时间正序或倒序排列，也可保留服务器顺序。
 
 ### 搜索与定位
 
-**搜索节点**
+点击标题栏的 **放大镜**，或运行 `ZooKeeper: Search Nodes...`。
 
-点击侧边栏标题栏的 **放大镜** 或执行 `ZooKeeper: Search Nodes...`，先选择搜索模式，再输入关键字：
-
-| 模式 | 匹配范围 | 示例 |
+| 模式 | 匹配方式 | 示例 |
 | --- | --- | --- |
-| 精确路径 | 输入完整路径直接定位节点 | `/app/config` |
+| 精确路径 | 直接定位完整路径 | `/app/config` |
 | 名称前缀 | 节点名称以关键字开头 | `config` |
-| 路径通配符 | `*` / `?` 匹配路径段 | `/app/*/config` |
-| 路径正则 | 正则表达式匹配完整路径 | `^/svc-\d+$` |
-| 内容 | 节点数据包含关键字（可限定子树） | `role` |
+| 路径通配符 | `*` / `?` 匹配路径 | `/app/*/config` |
+| 路径正则 | 正则匹配完整路径 | `^/svc-\d+$` |
+| 内容 | 节点数据包含关键字 | `role` |
 
-搜索结果按路径排序展示，点击结果后树视图自动展开并定位到对应节点。「精确路径」模式直接输入完整路径（如 `/app/config`）即可直达并选中该节点，不会做模糊匹配。
+搜索结果按路径排序。点击结果后，节点树会展开并定位到对应节点。内容搜索可限定子树范围，搜索过程中可按 Esc 取消。
 
-**完整性保证**：内容搜索默认不过滤任何节点（`zkViewer.maxNodeDataBytes` 为 0），搜索默认最多遍历 500000 个节点（`zkViewer.maxSearchNodes`），也可设为 0 表示无限制；若达到上限，界面会明确提示结果可能不完整。搜索过程中显示进度条，可随时按 Esc 取消。
+默认最多遍历 500000 个节点；达到 `zkViewer.maxSearchNodes` 上限时，界面会提示结果可能不完整。将该设置设为 `0` 可取消数量限制。`zkViewer.maxNodeDataBytes` 用于限制内容搜索读取的数据大小，默认 `0` 表示不限制。
 
-**提速建议**：搜索范围越小越快。在树节点上右键选择 **Search in this subtree...**，或内容搜索时限定子树根路径，可大幅减少遍历量。
+### 查看与编辑数据
 
-**路径定位**
+1. 双击节点，或右键选择 `Open Details`。
+2. 详情面板显示节点路径、stat 信息和数据内容。
+3. JSON 数据默认格式化展示；可切换到 TXT 查看原始文本，并可控制换行。
+4. 详情默认只读。点击 **Edit** 后才可修改。
+5. JSON 模式保存时会紧凑序列化；TXT 模式按输入内容原样保存。
+6. 保存时携带加载时的节点版本号。若其他客户端已修改节点，扩展会报告版本冲突且不会覆盖远端数据。
 
-执行 `ZooKeeper: Go to Path...` 输入完整路径（如 `/app/config`），树视图直接展开并选中目标节点。
+非 JSON 文本会自动切换为文本展示；二进制数据以十六进制只读展示。
 
-### 查看与编辑节点数据
+### 新增与删除节点
 
-1. 双击节点，或右键选择 `Open Details`，打开详情面板
-2. 面板展示节点路径、stat 信息（版本、创建 / 修改时间、数据长度、子节点数等）与数据内容
-3. 默认以 **JSON** 模式格式化展示，可切换 **TXT** 查看原始文本；格式化仅作用于显示，不会把缩进空格写入原始数据
-4. **Wrap** 控制是否自动换行，默认开启；**Minify JSON** 可安全移除 JSON 结构中的多余空格与换行，同时保留字符串值内部的空白
-5. 数据默认**只读**，点击 **Edit** 按钮才进入编辑模式；JSON 模式保存时自动紧凑序列化，TXT 模式按编辑内容原样保存
-6. 点击 **Save** 保存：写入携带节点版本号（乐观锁），若期间被其他端修改则提示版本冲突且**不会覆盖**，刷新后重新编辑即可
-7. 面板会持续监测节点：若编辑期间节点被其他端删除，立即弹出错误提示并自动关闭面板；保存失败也会弹出 VS Code 错误通知
+右键父节点并选择 `Add Node...`。节点名不能包含 `/`，也不能是 `.` 或 `..`。
 
-### 导入与导出节点数据
-
-- 右键选择 `Export Node Data...`：仅导出当前节点
-- 右键选择 `Export Node and Descendant Data...`：导出当前节点及所有层级的子节点，直到叶子节点
-- 导出文件为 JSON，每项包含完整 `path`、`data` 和 `encoding`；普通文本使用 `utf8`，无法无损表示为 UTF-8 的数据使用 `base64`
-- 打开 `ZooKeeper Nodes` 标题栏的 **省略号菜单**，在 **节点排序... / Sort Nodes...** 下方选择 **导入节点数据... / Import Node Data...**，可读取上述 JSON 并按完整路径恢复节点；入口始终可见，未连接时点击会提示先连接；导入是全局操作，不出现在节点右键菜单
-- `View Import Format` 会打开只读格式说明页；可直接下载标准模板，但不能在面板中编辑模板。模板与真实导出共用 `zk-viewer-node-data` 版本 1 结构和序列化逻辑
-- 导入前选择已存在节点的处理方式：**跳过**会保留已有数据，**覆盖**会使用版本校验更新数据；缺失节点按父级优先创建为持久节点
-- 文件格式、版本、未知字段、路径范围、重复路径、Base64 数据和外部父节点会在写入前校验；不支持自定义字段映射，不符合标准导出结构的 JSON 不会导入
-- 点击标题栏的 **语言按钮**可选择 **跟随 VS Code / 中文 / English**，选择会全局保存并立即更新树菜单、连接与节点操作、搜索、通知、导入导出、模板和已打开的详情面板；“跟随 VS Code”按 `vscode.env.language` 解析当前显示语言
-
-### 节点管理
-
-**新增节点**
-
-右键目标父节点，选择 `Add Node...`，填写节点名并选择类型：
-
-| 类型 | 特点 |
+| 类型 | 行为 |
 | --- | --- |
-| 持久 | 默认类型，数据持久保存 |
-| 持久顺序 | 名称自动追加递增序号，持久保存 |
-| 临时 | 会话断开即消失，通常用于服务注册 |
-| 临时顺序 | 会话断开即消失，名称自动追加递增序号 |
+| 持久 | 会话断开后仍保留 |
+| 持久顺序 | 自动追加递增序号并持久保留 |
+| 临时 | 会话断开时由 ZooKeeper 删除 |
+| 临时顺序 | 自动追加序号，会话断开时删除 |
 
-节点名不能包含 `/`，不能为 `.` 或 `..`。
+删除节点前会要求确认。节点包含子节点时，可选择递归删除；扩展会先删除子节点，再删除父节点。
 
-**删除节点**
+### 导入与导出
 
-- 右键节点，选择 `Delete Node`，弹窗确认后删除
-- 节点含子节点时选择 **Delete Recursively** 递归删除整个子树（子节点先删、父节点后删）
-- 取消确认不会执行任何删除操作
+- `Export Node Data...`：导出当前节点。
+- `Export Node and Descendant Data...`：导出当前节点及完整子树。
+- 标题栏省略号菜单中的 `Import Node Data...`：读取标准导出 JSON 并恢复节点。
+- `View Import Format`：查看只读格式说明并下载模板。
 
-**复制路径**
+导出数据包含完整 `path`、`data` 和 `encoding`。文本使用 `utf8`，无法无损表示为 UTF-8 的数据使用 `base64`。
 
-右键节点，选择 `Copy Path`，将节点完整路径复制到剪贴板。
+导入前可选择跳过或覆盖已存在节点。扩展会在写入前校验格式版本、路径范围、重复路径、Base64 数据和外部父节点；缺失节点按父级优先创建为持久节点。
 
-## 常用命令
+### 语言
 
-| 命令 | 说明 |
-| --- | --- |
-| `zkViewer.connect` / `zkViewer.disconnect` | 连接 / 断开 |
-| `zkViewer.addConnection` / `editConnection` / `removeConnection` | 连接配置管理 |
-| `zkViewer.refresh` | 刷新节点树 |
-| `zkViewer.search` | 搜索节点 |
-| `zkViewer.gotoPath` | 按路径定位 |
-| `zkViewer.addNode` / `deleteNode` / `editNode` | 节点增删改 |
-| `zkViewer.copyPath` | 复制节点路径 |
-| `zkViewer.exportNodeData` / `exportSubtreeData` | 导出单节点 / 完整子树数据 |
-| `zkViewer.importNodeData` | 从导出 JSON 恢复节点数据 |
-| `zkViewer.openImportFormat` | 查看只读导入格式并下载标准模板 |
-| `zkViewer.setLanguage` | 选择整个扩展界面的中文 / 英文显示模式 |
-| `zkViewer.openNodeDetail` | 打开详情面板 |
-| `zkViewer.setTreeSort` | 选择节点排序方式 |
+点击标题栏语言按钮，选择：
 
-## 开发
+- 跟随 VS Code
+- 中文
+- English
 
-```bash
-npm install        # 安装依赖
-npm run compile    # 编译 TypeScript
-npm run lint       # ESLint
-npm run format     # Prettier 格式化
-npm run test:unit  # 单元测试（Mocha，无需 VS Code）
-npm run test:perf  # 性能测试（500 子节点懒加载 < 500ms）
-npm run test:integration  # 集成测试（自动下载 VS Code 1.60.0 验证最低兼容版本）
-npm run package    # 生成 dist/*.vsix
-```
+切换后会立即更新菜单、通知、搜索、导入导出和已打开的详情面板。
 
-集成测试默认运行在最低支持版本 VS Code 1.60.0 上，可通过 `VSCODE_TEST_VERSION` 覆盖（如 `stable`）。
+## 隐私与安全
 
-## 文档
+- 扩展不包含遥测或使用情况上报。
+- ZooKeeper 数据只在 VS Code 与你配置的 ZooKeeper 服务器之间传输。
+- digest 密码使用 VS Code SecretStorage 保存。
+- 节点详情默认只读；修改和删除操作需要显式触发，删除包含确认步骤。
 
-- [需求文档](docs/REQUIREMENTS.md)
-- [设计文档](docs/design.md)（架构、模块设计、关键决策、兼容性与验收）
+请仍遵循最小权限原则，为日常浏览使用只读或受限的 ZooKeeper 账号。
 
 ## 已知限制
 
-- `node-zookeeper-client` 为原生模块，旧版 VS Code 的 Extension Host 可能需要 `electron-rebuild` 匹配其 Electron Node ABI
-- 二进制节点数据只读展示（十六进制视图），不可编辑
-- 临时节点随会话断开而消失（ZooKeeper 语义）
+- 二进制节点数据仅支持十六进制只读展示。
+- 临时节点会按 ZooKeeper 语义在会话断开后消失。
+- 超大集群的全树内容搜索可能耗时较长，建议从目标子树开始搜索。
+
+## 支持与反馈
+
+遇到问题请查看 [支持说明](SUPPORT.md)，或提交 [GitHub Issue](https://github.com/BeWaterMyFriend7/zk-viewer-vscode/issues)。
 
 ## 许可证
 
-Apache License 2.0，详见 [LICENSE](LICENSE)。
+[Apache License 2.0](LICENSE)
+
+## English
+
+ZooKeeper Viewer is a lightweight Apache ZooKeeper client for VS Code. It supports multiple connections, digest authentication, TLS, lazy tree browsing, path and content search, safe JSON/TXT editing with version checks, node management, subtree import/export, and Chinese/English UI.
+
+Open the ZooKeeper view from the Activity Bar, add a connection with the **+** button, connect, and expand the tree. Node details are read-only until you explicitly select **Edit**. Passwords are stored with VS Code SecretStorage, and the extension does not include telemetry.
+
+Requirements: VS Code 1.60.0+, Apache ZooKeeper 3.4+, Windows/macOS/Linux.
+
+For help, see [SUPPORT.md](SUPPORT.md) or open a [GitHub issue](https://github.com/BeWaterMyFriend7/zk-viewer-vscode/issues).

@@ -1,16 +1,36 @@
 {
   "name": "zk-viewer-vscode",
   "displayName": "ZooKeeper Viewer",
-  "description": "Lightweight visual ZooKeeper client for VS Code: browse, search, edit, add and delete nodes with JSON support.",
+  "description": "Lightweight visual ZooKeeper client for VS Code: browse, search, sort, edit, add, delete, import and export nodes with JSON support.",
   "version": "0.1.0",
-  "publisher": "zk-viewer",
+  "publisher": "BeWater",
   "license": "Apache-2.0",
+  "icon": "media/icon.png",
+  "homepage": "https://github.com/BeWaterMyFriend7/zk-viewer-vscode#readme",
+  "bugs": {
+    "url": "https://github.com/BeWaterMyFriend7/zk-viewer-vscode/issues"
+  },
+  "pricing": "Free",
   "engines": {
     "vscode": "^1.60.0"
   },
   "categories": [
+    "Visualization",
     "Other"
   ],
+  "keywords": [
+    "zookeeper",
+    "zk",
+    "database",
+    "viewer",
+    "explorer",
+    "json",
+    "distributed systems"
+  ],
+  "galleryBanner": {
+    "color": "#0F4C81",
+    "theme": "dark"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/BeWaterMyFriend7/zk-viewer-vscode.git"

@@ -14,3 +14,9 @@ dist/**
 .inttest*.log
 .stale-dist-file
 .tmp-ext-install/**
+.gitignore
+.mocharc.json
+AGENTS.md
+eslint.config.mjs
+tsconfig.json
+media/icon-source.svg
