@@ -6,7 +6,7 @@
 
 ![ZooKeeper Viewer feature demo](media/demo.gif)
 
-The demo covers the main workflow: connect to ZooKeeper, browse and sort nodes, search by path, inspect and edit JSON data, and import/export node data.
+The demo shows the complete ZooKeeper view toolbar (add connection, search, refresh, connect/disconnect, language, and the **More Actions** menu), every node context-menu action, node details, and the search flow from selecting a mode through locating a result. The **More Actions** menu includes connection editing/removal, sorting, node-data import, and import-format help. The node context menu includes details, add, edit, delete, copy path, node/subtree export, refresh, and subtree search.
 
 ## 为什么使用
 
