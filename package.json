@@ -975,13 +975,6 @@
         }
       ]
     },
-    "colors": {
-      "zkViewer.icon.folder": "#4EC9B0",
-      "zkViewer.icon.file": "#C586C0",
-      "zkViewer.icon.sequential": "#569CD6",
-      "zkViewer.icon.ephemeral": "#E51400",
-      "zkViewer.icon.ephemeralSequential": "#B5CEA8"
-    },
     "configuration": {
       "title": "ZooKeeper Viewer",
       "properties": {

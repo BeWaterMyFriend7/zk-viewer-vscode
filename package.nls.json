@@ -30,9 +30,4 @@
   "configuration.treeSort.description": "Child-node sort order.",
   "configuration.uiLanguage.description": "Language for all ZooKeeper Viewer buttons, dialogs, notifications, and detail panels. Auto follows the VS Code display language.",
   "configuration.dev.useMockClient.description": "Development/testing only: use the in-memory mock ZooKeeper client."
-  ,"color.zkViewer.icon.folder.description": "Color for folder (branch) node icons."
-  ,"color.zkViewer.icon.file.description": "Color for file (leaf) node icons."
-  ,"color.zkViewer.icon.sequential.description": "Color for sequential node icons."
-  ,"color.zkViewer.icon.ephemeral.description": "Color for ephemeral node icons."
-  ,"color.zkViewer.icon.ephemeralSequential.description": "Color for ephemeral sequential node icons."
 }

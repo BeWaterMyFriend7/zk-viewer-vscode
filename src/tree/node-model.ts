@@ -27,33 +27,32 @@ export function detectNodeType(stat: Pick<ZnodeStat, 'ephemeralOwner'>, name: st
 export function iconForType(type: NodeType, isLeaf = false): string {
   switch (type) {
     case 'persistent':
-      // Use non 'symbol-*' codicons so the ThemeColor is not overridden by the
-      // codicon's !important CSS rule, which affects the symbol-* product icons.
-      return isLeaf ? 'file' : 'folder';
+      return isLeaf ? 'symbol-file' : 'symbol-folder';
     case 'persistent_sequential':
-      return 'list-ordered';
+      return 'symbol-structure';
     case 'ephemeral':
-      return 'pulse';
+      return 'symbol-event';
     case 'ephemeral_sequential':
-      return 'plug';
+      return 'symbol-class';
   }
 }
 
 /**
- * Optional VS Code ThemeColor key to tint the tree icon so leaves, branches
- * and node types are visually distinct. Keys come from the built-in color
- * registry; unsupported keys fall back to the default icon color.
+ * Optional VS Code ThemeColor key to tint the tree icon. The underlying
+ * 'symbol-*' codicons already inherit the theme's symbolIcon foreground color,
+ * so returning a key only overrides when the theme resolves it; unsupported
+ * keys fall back to the default symbol icon color.
  */
 export function iconColorForType(type: NodeType, isLeaf = false): string | undefined {
   switch (type) {
     case 'persistent':
-      return isLeaf ? 'zkViewer.icon.file' : 'zkViewer.icon.folder';
+      return isLeaf ? 'symbolIcon.fileForeground' : 'symbolIcon.folderForeground';
     case 'persistent_sequential':
-      return 'zkViewer.icon.sequential';
+      return 'symbolIcon.keywordForeground';
     case 'ephemeral':
-      return 'zkViewer.icon.ephemeral';
+      return 'symbolIcon.eventForeground';
     case 'ephemeral_sequential':
-      return 'zkViewer.icon.ephemeralSequential';
+      return 'symbolIcon.classForeground';
   }
 }
 

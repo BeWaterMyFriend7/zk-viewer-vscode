@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { ZkClient } from '../zk/zk-client';
 import { formatZkTime } from '../utils/time';
-import { iconColorForType, iconForType } from './node-model';
+import { iconForType } from './node-model';
 import {
   getParentDescriptor,
   listChildDescriptors,
@@ -18,11 +18,10 @@ export class ZkNode extends vscode.TreeItem {
         : vscode.TreeItemCollapsibleState.Collapsed,
     );
     this.contextValue = 'znode';
-    const colorKey = iconColorForType(descriptor.type, descriptor.isLeaf);
-    this.iconPath = new vscode.ThemeIcon(
-      iconForType(descriptor.type, descriptor.isLeaf),
-      colorKey ? new vscode.ThemeColor(colorKey) : undefined,
-    );
+    // Use the standard 'symbol-*' codicons; VS Code applies the theme's
+    // symbolIcon foreground color to them (this is what gave the lightning
+    // glyph its color). No ThemeColor is set so the codicon's own CSS wins.
+    this.iconPath = new vscode.ThemeIcon(iconForType(descriptor.type, descriptor.isLeaf));
     const stat = descriptor.stat;
     this.tooltip =
       stat === undefined
