@@ -2,6 +2,8 @@ import type { ZnodeStat } from '../zk/zk-client';
 
 export type NodeType = 'persistent' | 'persistent_sequential' | 'ephemeral' | 'ephemeral_sequential';
 
+export const NODE_ICON_COLOR = '#D4A72C';
+
 export function isSequentialName(name: string): boolean {
   return /-\d{10}$/.test(name);
 }
@@ -37,23 +39,25 @@ export function iconForType(type: NodeType, isLeaf = false): string {
   }
 }
 
-/**
- * Optional VS Code ThemeColor key to tint the tree icon. The underlying
- * 'symbol-*' codicons already inherit the theme's symbolIcon foreground color,
- * so returning a key only overrides when the theme resolves it; unsupported
- * keys fall back to the default symbol icon color.
- */
-export function iconColorForType(type: NodeType, isLeaf = false): string | undefined {
+export function iconAssetForType(type: NodeType, isLeaf = false): string {
   switch (type) {
     case 'persistent':
-      return isLeaf ? 'symbolIcon.fileForeground' : 'symbolIcon.folderForeground';
+      return isLeaf ? 'node-file.svg' : 'node-folder.svg';
     case 'persistent_sequential':
-      return 'symbolIcon.keywordForeground';
+      return 'node-sequential.svg';
     case 'ephemeral':
-      return 'symbolIcon.eventForeground';
+      return 'node-ephemeral.svg';
     case 'ephemeral_sequential':
-      return 'symbolIcon.classForeground';
+      return 'node-ephemeral-sequential.svg';
   }
+}
+
+/**
+ * All node SVG assets intentionally use one fixed color. This keeps the tree
+ * visible when the active VS Code theme renders codicons in gray.
+ */
+export function iconColorForType(_type: NodeType, _isLeaf = false): string {
+  return NODE_ICON_COLOR;
 }
 
 /**

@@ -942,7 +942,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   manager = new ConnectionManager(createClientFactory(isMockMode()), managerOptions);
   manager.onStateChange((state) => updateUiState(state));
 
-  treeProvider = new NodeTreeProvider(() => manager.getClient());
+  treeProvider = new NodeTreeProvider(() => manager.getClient(), context.extensionUri);
   treeView = vscode.window.createTreeView('zkViewer.tree', { treeDataProvider: treeProvider });
   context.subscriptions.push(treeView);
 

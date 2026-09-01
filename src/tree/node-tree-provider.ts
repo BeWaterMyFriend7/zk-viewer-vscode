@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { ZkClient } from '../zk/zk-client';
 import { formatZkTime } from '../utils/time';
-import { iconForType } from './node-model';
+import { iconAssetForType } from './node-model';
 import {
   getParentDescriptor,
   listChildDescriptors,
@@ -10,7 +10,10 @@ import {
 } from './node-tree';
 
 export class ZkNode extends vscode.TreeItem {
-  constructor(readonly descriptor: ZkNodeDescriptor) {
+  constructor(
+    readonly descriptor: ZkNodeDescriptor,
+    extensionUri: vscode.Uri,
+  ) {
     super(
       descriptor.name,
       descriptor.collapsibleState === 'none'
@@ -18,10 +21,11 @@ export class ZkNode extends vscode.TreeItem {
         : vscode.TreeItemCollapsibleState.Collapsed,
     );
     this.contextValue = 'znode';
-    // Use the standard 'symbol-*' codicons; VS Code applies the theme's
-    // symbolIcon foreground color to them (this is what gave the lightning
-    // glyph its color). No ThemeColor is set so the codicon's own CSS wins.
-    this.iconPath = new vscode.ThemeIcon(iconForType(descriptor.type, descriptor.isLeaf));
+    this.iconPath = vscode.Uri.joinPath(
+      extensionUri,
+      'media',
+      iconAssetForType(descriptor.type, descriptor.isLeaf),
+    );
     const stat = descriptor.stat;
     this.tooltip =
       stat === undefined
@@ -34,7 +38,10 @@ export class NodeTreeProvider implements vscode.TreeDataProvider<ZkNode> {
   private readonly changeEmitter = new vscode.EventEmitter<ZkNode | undefined | null | void>();
   readonly onDidChangeTreeData = this.changeEmitter.event;
 
-  constructor(private readonly getClient: () => ZkClient | undefined) {}
+  constructor(
+    private readonly getClient: () => ZkClient | undefined,
+    private readonly extensionUri: vscode.Uri,
+  ) {}
 
   getTreeItem(element: ZkNode): vscode.TreeItem {
     return element;
@@ -43,13 +50,16 @@ export class NodeTreeProvider implements vscode.TreeDataProvider<ZkNode> {
   async getChildren(element?: ZkNode): Promise<ZkNode[]> {
     if (!element) {
       return [
-        new ZkNode({
-          path: '/',
-          name: '/',
-          type: 'persistent',
-          collapsibleState: 'collapsed',
-          isLeaf: false,
-        }),
+        new ZkNode(
+          {
+            path: '/',
+            name: '/',
+            type: 'persistent',
+            collapsibleState: 'collapsed',
+            isLeaf: false,
+          },
+          this.extensionUri,
+        ),
       ];
     }
     const client = this.getClient();
@@ -59,7 +69,7 @@ export class NodeTreeProvider implements vscode.TreeDataProvider<ZkNode> {
     try {
       const sort = vscode.workspace.getConfiguration('zkViewer').get<TreeSortOrder>('treeSort') ?? 'name';
       const descriptors = await listChildDescriptors(client, element.descriptor.path, sort);
-      return descriptors.map((descriptor) => new ZkNode(descriptor));
+      return descriptors.map((descriptor) => new ZkNode(descriptor, this.extensionUri));
     } catch {
       return [];
     }
@@ -75,7 +85,7 @@ export class NodeTreeProvider implements vscode.TreeDataProvider<ZkNode> {
     if (!parentDescriptor) {
       return undefined;
     }
-    return new ZkNode(parentDescriptor);
+    return new ZkNode(parentDescriptor, this.extensionUri);
   }
 
   refresh(): void {

@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import {
   detectNodeType,
+  iconAssetForType,
   iconForType,
   iconColorForType,
   isSequentialName,
@@ -56,11 +57,22 @@ describe('node model', () => {
     assert.strictEqual(iconForType('ephemeral', true), 'symbol-event');
   });
 
-  it('returns a distinct theme color key for each node type', () => {
-    assert.strictEqual(iconColorForType('persistent', true), 'symbolIcon.fileForeground');
-    assert.strictEqual(iconColorForType('persistent', false), 'symbolIcon.folderForeground');
-    assert.strictEqual(iconColorForType('persistent_sequential', false), 'symbolIcon.keywordForeground');
-    assert.strictEqual(iconColorForType('ephemeral', false), 'symbolIcon.eventForeground');
-    assert.strictEqual(iconColorForType('ephemeral_sequential', false), 'symbolIcon.classForeground');
+  it('maps node types to fixed-color icon assets', () => {
+    assert.strictEqual(iconAssetForType('persistent', true), 'node-file.svg');
+    assert.strictEqual(iconAssetForType('persistent', false), 'node-folder.svg');
+    assert.strictEqual(iconAssetForType('persistent_sequential'), 'node-sequential.svg');
+    assert.strictEqual(iconAssetForType('ephemeral'), 'node-ephemeral.svg');
+    assert.strictEqual(iconAssetForType('ephemeral_sequential'), 'node-ephemeral-sequential.svg');
+  });
+
+  it('uses one fixed visible color for every node type', () => {
+    const colors = [
+      iconColorForType('persistent', true),
+      iconColorForType('persistent', false),
+      iconColorForType('persistent_sequential'),
+      iconColorForType('ephemeral'),
+      iconColorForType('ephemeral_sequential'),
+    ];
+    assert.deepStrictEqual(new Set(colors), new Set(['#D4A72C']));
   });
 });
