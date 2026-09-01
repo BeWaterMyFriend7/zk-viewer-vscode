@@ -13,20 +13,13 @@ export interface ConnectionManagerOptions {
   reconnectDelayMs: number;
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export class ConnectionManager {
   private client: ZkClient | undefined;
-  private currentConfig: ConnectionConfig | undefined;
   private currentPassword: string | undefined;
   private state: ZkConnectionState = 'closed';
   private readonly listeners = new Set<(state: ZkConnectionState) => void>();
-  private attempts = 0;
   private explicitClose = false;
-  private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
-  private lostInProgress = false;
+  private recoveryTimer: ReturnType<typeof setTimeout> | undefined;
   private lastError: Error | undefined;
 
   constructor(
@@ -55,24 +48,15 @@ export class ConnectionManager {
 
   async connect(config: ConnectionConfig, password?: string): Promise<void> {
     this.explicitClose = false;
-    this.attempts = 0;
     this.lastError = undefined;
-    this.currentConfig = config;
     this.currentPassword = password;
     await this.establish(config);
   }
 
   disconnect(): void {
     this.explicitClose = true;
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = undefined;
-    }
-    if (this.client) {
-      const client = this.client;
-      this.client = undefined;
-      client.close();
-    }
+    this.cancelRecovery();
+    this.teardownClient();
     this.setState('closed');
   }
 
@@ -97,17 +81,7 @@ export class ConnectionManager {
       password: this.currentPassword,
     });
     this.client = client;
-    client.onStateChange((state) => {
-      if (this.client !== client) {
-        return;
-      }
-      if (state === 'disconnected' && !this.explicitClose) {
-        void this.handleLost();
-      }
-      if (state !== this.state) {
-        this.emitState(state);
-      }
-    });
+    client.onStateChange((state) => this.handleClientState(client, state));
     if (previous && previous !== client) {
       previous.close();
     }
@@ -118,56 +92,92 @@ export class ConnectionManager {
       return;
     }
     if (this.client === client) {
-      this.attempts = 0;
       this.setState('connected');
     }
   }
 
-  private emitState(state: ZkConnectionState): void {
-    this.state = state;
-    for (const listener of this.listeners) {
-      listener(state);
+  /**
+   * Centralised state handling. The underlying library auto-reconnects while
+   * keeping its session, so a plain 'disconnected' is treated as a bounded
+   * recovery window rather than a tear-down. Only a real session expiry or a
+   * window timeout tears the client down.
+   */
+  private handleClientState(client: ZkClient, state: ZkConnectionState): void {
+    if (this.client !== client) {
+      return;
+    }
+    if (state === 'connected') {
+      this.cancelRecovery();
+      this.setState('connected');
+      return;
+    }
+    if (state === 'session-expired') {
+      this.cancelRecovery();
+      this.lastError = new Error('Session expired; reconnect required');
+      this.setState('session-expired');
+      this.teardownClient();
+      return;
+    }
+    if (state === 'closed' && this.state === 'session-expired') {
+      // The teardown we triggered for an expired session also closes the
+      // client, which re-emits 'closed'. Keep session-expired as the
+      // authoritative state until the user explicitly reconnects.
+      return;
+    }
+    if (state === 'disconnected' && this.state !== 'disconnected') {
+      this.startRecovery();
+      this.setState('disconnected');
+      return;
+    }
+    if (state !== this.state) {
+      this.setState(state);
     }
   }
 
-  private async handleLost(): Promise<void> {
-    if (this.explicitClose || this.lostInProgress || !this.currentConfig) {
+  private startRecovery(): void {
+    if (this.recoveryTimer) {
       return;
     }
-    this.lostInProgress = true;
-    try {
-      this.attempts += 1;
-      if (this.attempts > this.opts.maxReconnectAttempts) {
-        this.lastError = new Error('Maximum reconnect attempts reached');
-        this.setState('disconnected');
-        return;
-      }
-      this.setState('disconnected');
-      await delay(this.opts.reconnectDelayMs);
-      if (this.explicitClose) {
-        return;
-      }
-      await this.establish(this.currentConfig).catch((err: unknown) => {
-        this.lastError = err instanceof Error ? err : new Error(String(err));
-      });
-    } finally {
-      this.lostInProgress = false;
+    // The underlying client keeps its session while the socket is down. Give
+    // it a bounded window (roughly the reconnect budget) to recover before we
+    // give up and tear it down, which stops the library's endless reconnect.
+    const windowMs = this.opts.maxReconnectAttempts * this.opts.reconnectDelayMs;
+    this.recoveryTimer = setTimeout(() => {
+      this.recoveryTimer = undefined;
+      this.handleRecoveryTimeout();
+    }, windowMs);
+  }
+
+  private handleRecoveryTimeout(): void {
+    if (this.explicitClose) {
+      return;
     }
+    this.lastError = new Error('Reconnect attempts exhausted');
+    this.teardownClient();
+    this.setState('disconnected');
   }
 
   private async handleFailure(err: unknown): Promise<void> {
     const error = err instanceof Error ? err : new Error(String(err));
-    this.attempts += 1;
-    if (this.attempts > this.opts.maxReconnectAttempts) {
-      this.lastError = error;
-      this.setState('disconnected');
-      throw error;
-    }
+    this.lastError = error;
+    this.teardownClient();
     this.setState('disconnected');
-    await delay(this.opts.reconnectDelayMs);
-    if (this.explicitClose || !this.currentConfig) {
-      return;
+    throw error;
+  }
+
+  private cancelRecovery(): void {
+    if (this.recoveryTimer) {
+      clearTimeout(this.recoveryTimer);
+      this.recoveryTimer = undefined;
     }
-    await this.establish(this.currentConfig);
+  }
+
+  private teardownClient(): void {
+    this.cancelRecovery();
+    if (this.client) {
+      const client = this.client;
+      this.client = undefined;
+      client.close();
+    }
   }
 }

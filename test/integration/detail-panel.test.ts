@@ -52,6 +52,39 @@ suite('Detail panel (mock)', () => {
     await vscode.commands.executeCommand('zkViewer.disconnect');
   });
 
+  test('opens details in a new tab, keeps multiple panels, and closes all', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/app', Buffer.alloc(0), 'PERSISTENT');
+    await mock.create('/app/a', Buffer.from('{}'), 'PERSISTENT');
+    await mock.create('/app/b', Buffer.from('{}'), 'PERSISTENT');
+
+    await vscode.commands.executeCommand('zkViewer.openNodeDetail', { descriptor: { path: '/app/a' } });
+    await vscode.commands.executeCommand('zkViewer.openNodeDetail', { descriptor: { path: '/app/b' } });
+    assert.strictEqual(
+      api.getAllDetailControllers().length,
+      1,
+      'default open still replaces the previous panel',
+    );
+
+    await vscode.commands.executeCommand('zkViewer.openNodeDetailInNewTab', {
+      descriptor: { path: '/app/b' },
+    });
+    await vscode.commands.executeCommand('zkViewer.openNodeDetailInNewTab', {
+      descriptor: { path: '/app/a' },
+    });
+    assert.strictEqual(api.getAllDetailControllers().length, 3, 'new-tab opens should stack panels');
+
+    await vscode.commands.executeCommand('zkViewer.closeAllNodeDetails');
+    assert.strictEqual(api.getAllDetailControllers().length, 0, 'close all should clear every detail panel');
+    assert.strictEqual(api.detailController(), undefined, 'most-recent controller should be cleared');
+
+    await vscode.commands.executeCommand('zkViewer.disconnect');
+  });
+
   test('closes the detail panel when the node is deleted', async () => {
     await api.store.clear();
     await vscode.commands.executeCommand('zkViewer.connect');

@@ -8,7 +8,7 @@ import {
 } from '../../src/tree/node-tree';
 
 function descriptor(name: string): ZkNodeDescriptor {
-  return { path: `/${name}`, name, type: 'persistent', collapsibleState: 'collapsed' };
+  return { path: '/' + name, name, type: 'persistent', collapsibleState: 'collapsed', isLeaf: true };
 }
 
 describe('listChildDescriptors', () => {
@@ -100,6 +100,7 @@ describe('getParentDescriptor', () => {
       name: 'config',
       type: 'persistent',
       collapsibleState: 'collapsed',
+      isLeaf: true,
     });
     assert.strictEqual(child?.path, '/app');
     assert.strictEqual(child?.name, 'app');
@@ -111,6 +112,7 @@ describe('getParentDescriptor', () => {
       name: 'app',
       type: 'persistent',
       collapsibleState: 'collapsed',
+      isLeaf: true,
     });
     assert.strictEqual(parent?.path, '/');
   });
@@ -121,6 +123,7 @@ describe('getParentDescriptor', () => {
       name: '/',
       type: 'persistent',
       collapsibleState: 'collapsed',
+      isLeaf: true,
     });
     assert.strictEqual(parent, undefined);
   });

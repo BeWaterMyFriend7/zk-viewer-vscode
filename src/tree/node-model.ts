@@ -7,7 +7,11 @@ export function isSequentialName(name: string): boolean {
 }
 
 export function detectNodeType(stat: Pick<ZnodeStat, 'ephemeralOwner'>, name: string): NodeType {
-  const ephemeral = stat.ephemeralOwner !== '0x0';
+  // The native client returns ephemeralOwner as an 8-byte big-endian long. A
+  // plain persistent node has owner 0, which may appear as '0x0', '0', or a
+  // zero-padded hex like '0x0000000000000000'. Treat any ownership value that
+  // parses to zero as non-ephemeral so persistent nodes get a folder/file icon.
+  const ephemeral = !isZeroId(stat.ephemeralOwner);
   const sequential = isSequentialName(name);
   if (ephemeral) {
     return sequential ? 'ephemeral_sequential' : 'ephemeral';
@@ -15,10 +19,15 @@ export function detectNodeType(stat: Pick<ZnodeStat, 'ephemeralOwner'>, name: st
   return sequential ? 'persistent_sequential' : 'persistent';
 }
 
-export function iconForType(type: NodeType): string {
+/**
+ * Maps a node to a codicon. Plain persistent nodes use a folder/file glyph
+ * based on whether they have children (isLeaf), so a tree reads at a glance.
+ * Ephemeral and sequential nodes keep their dedicated type icons.
+ */
+export function iconForType(type: NodeType, isLeaf = false): string {
   switch (type) {
     case 'persistent':
-      return 'symbol-folder';
+      return isLeaf ? 'symbol-file' : 'symbol-folder';
     case 'persistent_sequential':
       return 'symbol-structure';
     case 'ephemeral':
@@ -26,4 +35,21 @@ export function iconForType(type: NodeType): string {
     case 'ephemeral_sequential':
       return 'symbol-class';
   }
+}
+
+/**
+ * True when an ephemeralOwner string represents a zero (i.e. a persistent
+ * node). Accepts plain numbers, '0x' hex with or without leading zeros, and
+ * an empty/undefined owner which is also treated as non-ephemeral.
+ */
+export function isZeroId(value: string | undefined): boolean {
+  if (value === undefined || value === '' || value === '0') {
+    return true;
+  }
+  if (value.startsWith('0x') || value.startsWith('0X')) {
+    const hex = value.slice(2);
+    return /^0*$/.test(hex);
+  }
+  const num = Number(value);
+  return Number.isFinite(num) && num === 0;
 }

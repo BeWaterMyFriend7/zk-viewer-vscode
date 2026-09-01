@@ -69,6 +69,24 @@ suite('Node actions (mock)', () => {
     await vscode.commands.executeCommand('zkViewer.disconnect');
   });
 
+  test('add node without options opens a create form', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.connect');
+    const mock = api.mockClients.get('localhost:2181|');
+    assert.ok(mock);
+    mock.clear();
+    await mock.create('/app', Buffer.alloc(0), 'PERSISTENT');
+
+    await vscode.commands.executeCommand('zkViewer.addNode', { descriptor: { path: '/app' } });
+    const html = api.nodeCreateHtml() ?? '';
+    assert.ok(html.includes('id="n-name"'), 'create form should include a name field');
+    assert.ok(html.includes('id="n-mode"'), 'create form should include a mode selector');
+    assert.ok(html.includes('id="data"'), 'create form should include a data editor');
+    assert.ok(html.includes('value="/app"'), 'create form should prefill the read-only parent path');
+
+    await vscode.commands.executeCommand('zkViewer.disconnect');
+  });
+
   test('cancelled delete confirmation does not remove the node', async () => {
     await api.store.clear();
     await vscode.commands.executeCommand('zkViewer.connect');

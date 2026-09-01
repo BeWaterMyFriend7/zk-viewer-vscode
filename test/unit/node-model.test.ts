@@ -1,5 +1,11 @@
 import * as assert from 'assert';
-import { detectNodeType, iconForType, isSequentialName, type NodeType } from '../../src/tree/node-model';
+import {
+  detectNodeType,
+  iconForType,
+  isSequentialName,
+  isZeroId,
+  type NodeType,
+} from '../../src/tree/node-model';
 
 const persistentStat = { ephemeralOwner: '0x0' };
 const ephemeralStat = { ephemeralOwner: '0x1a2b3c' };
@@ -10,6 +16,21 @@ describe('node model', () => {
     assert.strictEqual(detectNodeType(ephemeralStat, 'session-1'), 'ephemeral');
     assert.strictEqual(detectNodeType(persistentStat, 'seq-0000000001'), 'persistent_sequential');
     assert.strictEqual(detectNodeType(ephemeralStat, 'seq-0000000002'), 'ephemeral_sequential');
+  });
+
+  it('treats zero-padded and empty owners as persistent', () => {
+    assert.strictEqual(detectNodeType({ ephemeralOwner: '0x0000000000000000' }, 'config'), 'persistent');
+    assert.strictEqual(detectNodeType({ ephemeralOwner: '0x0' }, 'config'), 'persistent');
+    assert.strictEqual(detectNodeType({ ephemeralOwner: '0' }, 'config'), 'persistent');
+  });
+
+  it('recognizes zero ids in multiple representations', () => {
+    assert.strictEqual(isZeroId('0x0'), true);
+    assert.strictEqual(isZeroId('0x0000000000000000'), true);
+    assert.strictEqual(isZeroId('0'), true);
+    assert.strictEqual(isZeroId(''), true);
+    assert.strictEqual(isZeroId(undefined), true);
+    assert.strictEqual(isZeroId('0x1a2b3c'), false);
   });
 
   it('recognizes sequential name suffixes', () => {
@@ -25,5 +46,12 @@ describe('node model', () => {
     for (const icon of icons) {
       assert.match(icon, /^symbol-/);
     }
+  });
+
+  it('uses a file icon for a leaf persistent node and a folder for a branch', () => {
+    assert.strictEqual(iconForType('persistent', true), 'symbol-file');
+    assert.strictEqual(iconForType('persistent', false), 'symbol-folder');
+    assert.strictEqual(iconForType('persistent_sequential', true), 'symbol-structure');
+    assert.strictEqual(iconForType('ephemeral', true), 'symbol-event');
   });
 });

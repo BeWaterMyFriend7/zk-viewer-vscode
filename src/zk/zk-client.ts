@@ -2,7 +2,7 @@ import type { Client, Exception, Stat as ZkStat } from 'node-zookeeper-client';
 
 export type CreateMode = 'PERSISTENT' | 'PERSISTENT_SEQUENTIAL' | 'EPHEMERAL' | 'EPHEMERAL_SEQUENTIAL';
 
-export type ZkConnectionState = 'connecting' | 'connected' | 'disconnected' | 'closed';
+export type ZkConnectionState = 'connecting' | 'connected' | 'disconnected' | 'session-expired' | 'closed';
 
 export interface ZnodeStat {
   czxid: string;
@@ -83,11 +83,11 @@ function loadZookeeper(): typeof import('node-zookeeper-client') {
 }
 
 function idToString(value: Buffer | string): string {
-  return Buffer.isBuffer(value) ? '0x' + value.toString('hex') : String(value);
-}
-
-function timeToString(value: Buffer | string | number): string {
-  return Buffer.isBuffer(value) ? value.toString('hex') : String(value);
+  if (!Buffer.isBuffer(value)) {
+    return value;
+  }
+  const hex = value.toString('hex').replace(/^0+/, '');
+  return hex === '' ? '0x0' : '0x' + hex;
 }
 
 function statToZnodeStat(stat: ZkStat): ZnodeStat {
@@ -95,8 +95,11 @@ function statToZnodeStat(stat: ZkStat): ZnodeStat {
     czxid: idToString(stat.czxid),
     mzxid: idToString(stat.mzxid),
     pzxid: idToString(stat.pzxid),
-    ctime: timeToString(stat.ctime),
-    mtime: timeToString(stat.mtime),
+    // ZooKeeper stores ctime/mtime as 8-byte big-endian milliseconds. We keep
+    // the raw millisecond string so sorting stays numeric, and format it to a
+    // readable local time at the display layer.
+    ctime: millisToString(stat.ctime),
+    mtime: millisToString(stat.mtime),
     version: stat.version,
     cversion: stat.cversion,
     aversion: stat.aversion,
@@ -104,6 +107,13 @@ function statToZnodeStat(stat: ZkStat): ZnodeStat {
     dataLength: stat.dataLength,
     numChildren: stat.numChildren,
   };
+}
+
+function millisToString(value: Buffer | string | number): string {
+  if (Buffer.isBuffer(value)) {
+    return value.length === 8 ? Number(value.readBigInt64BE(0)).toString() : String(value);
+  }
+  return String(value);
 }
 
 export interface NodeZkClientOptions {
@@ -190,9 +200,15 @@ export class NodeZkClient implements ZkClient {
       return;
     }
     this.persistentHandlerWired = true;
+    // The underlying library auto-reconnects after a socket drop while keeping
+    // the session. When it succeeds it re-emits 'connected', so mirror that
+    // state here so the extension never thinks it is still disconnected.
+    this.client.on('connected', () => {
+      this.setState('connected');
+    });
     this.client.on('disconnected', () => this.setState('disconnected'));
-    this.client.on('expired', () => this.setState('disconnected'));
-    this.client.on('authenticationFailed', () => this.setState('disconnected'));
+    this.client.on('expired', () => this.setState('session-expired'));
+    this.client.on('authenticationFailed', () => this.setState('session-expired'));
   }
 
   close(): void {

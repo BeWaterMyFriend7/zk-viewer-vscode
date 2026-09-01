@@ -31,6 +31,16 @@ export interface ConnectionMessages {
   removeConnectionPrompt: string;
   removeConnectionConfirm(name: string): string;
   removeButton: string;
+  /** Connection form (add/edit) labels. */
+  formTitle: string;
+  sessionTimeoutTitle: string;
+  saveButton: string;
+  cancelButton: string;
+  hostsRequired: string;
+  /** Connection test (form button). */
+  testConnectionButton: string;
+  testSuccess: string;
+  testFailed(detail: string): string;
 }
 
 export interface SearchMessages {
@@ -69,6 +79,10 @@ export interface NodeMessages {
   deleteNoNode: string;
   deleteFailure(path: string, code: string | undefined, guidance: string): string;
   copied(path: string): string;
+  /** Node-create form (modal) labels. */
+  addNodeTitle: string;
+  cancelNodeButton: string;
+  createNodeButton: string;
 }
 
 export interface SortMessages {
@@ -188,6 +202,14 @@ const english: ImportExportMessages = {
     removeConnectionPrompt: 'Remove connection',
     removeConnectionConfirm: (name) => `Remove connection "${name}"?`,
     removeButton: 'Remove',
+    formTitle: 'Connection',
+    sessionTimeoutTitle: 'Session timeout (ms)',
+    saveButton: 'Save',
+    cancelButton: 'Cancel',
+    hostsRequired: 'Hosts must not be empty',
+    testConnectionButton: 'Test Connection',
+    testSuccess: 'Connection OK',
+    testFailed: (detail) => `Connection failed: ${detail}`,
   },
   search: {
     modeLabels: {
@@ -243,6 +265,9 @@ const english: ImportExportMessages = {
     deleteNoNode: 'node no longer exists. Refresh the tree.',
     deleteFailure: (path, code, guidance) => `Cannot delete ${path}${code ? ` [${code}]` : ''}: ${guidance}`,
     copied: (path) => `Copied ${path}`,
+    addNodeTitle: 'New Node',
+    cancelNodeButton: 'Cancel',
+    createNodeButton: 'Create',
   },
   sort: {
     prompt: 'Sort nodes by',
@@ -308,7 +333,7 @@ const english: ImportExportMessages = {
   },
   importButton: 'Import Node Data...',
   exportNodeButton: 'Export Node Data...',
-  exportSubtreeButton: 'Export Node and Descendant Data...',
+  exportSubtreeButton: 'Export Node and All Child Data...',
   openImportFormatButton: 'View Import Format...',
   downloadTemplateButton: 'Download Standard Template',
   languageButton: 'Set Language...',
@@ -347,7 +372,7 @@ const english: ImportExportMessages = {
     }
   },
   exportDialogTitle: (path, recursive) =>
-    recursive ? `Export ${path} and all descendants` : `Export ${path}`,
+    recursive ? `Export ${path} and all child nodes...` : `Export ${path}...`,
   exportSaveLabel: 'Export',
   exportProgress: (path, recursive) => (recursive ? `Exporting subtree ${path}...` : `Exporting ${path}...`),
   exportSuccess: (count, targetPath) => `Exported ${count} node(s) to ${targetPath}`,
@@ -400,6 +425,14 @@ const chinese: ImportExportMessages = {
     removeConnectionPrompt: '选择要删除的连接',
     removeConnectionConfirm: (name) => `确定删除连接“${name}”吗？`,
     removeButton: '删除',
+    formTitle: '连接',
+    sessionTimeoutTitle: '会话超时（毫秒）',
+    saveButton: '保存',
+    cancelButton: '取消',
+    hostsRequired: '服务器地址不能为空',
+    testConnectionButton: '测试连接',
+    testSuccess: '连接成功',
+    testFailed: (detail) => `连接失败：${detail}`,
   },
   search: {
     modeLabels: {
@@ -455,6 +488,9 @@ const chinese: ImportExportMessages = {
     deleteNoNode: '节点已不存在，请刷新节点树。',
     deleteFailure: (path, code, guidance) => `无法删除 ${path}${code ? ` [${code}]` : ''}：${guidance}`,
     copied: (path) => `已复制路径 ${path}`,
+    addNodeTitle: '新增节点',
+    cancelNodeButton: '取消',
+    createNodeButton: '创建',
   },
   sort: {
     prompt: '节点排序方式',
@@ -518,7 +554,7 @@ const chinese: ImportExportMessages = {
   },
   importButton: '导入节点数据...',
   exportNodeButton: '导出节点数据...',
-  exportSubtreeButton: '导出节点及所有后代数据...',
+  exportSubtreeButton: '导出节点及所有子节点数据...',
   openImportFormatButton: '查看导入格式...',
   downloadTemplateButton: '下载标准模板',
   languageButton: '设置语言...',
@@ -556,7 +592,7 @@ const chinese: ImportExportMessages = {
         return `外部父节点不存在：${path ?? ''}`.trim();
     }
   },
-  exportDialogTitle: (path, recursive) => (recursive ? `导出 ${path} 及其所有后代节点` : `导出 ${path}`),
+  exportDialogTitle: (path, recursive) => (recursive ? `导出 ${path} 及其所有子节点...` : `导出 ${path}...`),
   exportSaveLabel: '导出',
   exportProgress: (path, recursive) => (recursive ? `正在导出子树 ${path}...` : `正在导出 ${path}...`),
   exportSuccess: (count, targetPath) => `已导出 ${count} 个节点到 ${targetPath}`,

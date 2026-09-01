@@ -7,6 +7,8 @@ export interface ZkNodeDescriptor {
   name: string;
   type: NodeType;
   collapsibleState: 'none' | 'collapsed';
+  /** True when the node has no children (a leaf), used for the tree icon. */
+  isLeaf: boolean;
   stat?: ZkNodeTimes;
 }
 
@@ -62,7 +64,16 @@ export function getParentDescriptor(element: ZkNodeDescriptor): ZkNodeDescriptor
   const idx = path.lastIndexOf('/');
   const parentPath = idx === 0 ? '/' : path.slice(0, idx);
   const parentName = parentPath === '/' ? '/' : parentPath.slice(parentPath.lastIndexOf('/') + 1);
-  return { path: parentPath, name: parentName, type: 'persistent', collapsibleState: 'collapsed' };
+  // The parent is reconstructed without a network stat call, so its leaf-ness
+  // cannot be known here; treat it as non-leaf (folder) which is the common
+  // case and avoids a misleading file icon for an expandable node.
+  return {
+    path: parentPath,
+    name: parentName,
+    type: 'persistent',
+    collapsibleState: 'collapsed',
+    isLeaf: false,
+  };
 }
 
 /**
@@ -84,10 +95,12 @@ export async function listChildDescriptors(
       const childPath = joinPath(path, name);
       let type: NodeType = 'persistent';
       let times: ZkNodeTimes | undefined;
+      let isLeaf = true;
       try {
         const stat = await client.getStat(childPath);
         type = stat ? detectNodeType(stat, name) : 'persistent';
         times = stat ? { ctime: stat.ctime, mtime: stat.mtime } : undefined;
+        isLeaf = stat ? stat.numChildren === 0 : true;
       } catch {
         type = 'persistent';
       }
@@ -96,6 +109,7 @@ export async function listChildDescriptors(
         name,
         type,
         collapsibleState: 'collapsed',
+        isLeaf,
         stat: times,
       };
     },

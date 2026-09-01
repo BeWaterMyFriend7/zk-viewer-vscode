@@ -48,6 +48,8 @@ code --install-extension zk-viewer-vscode.vsix
 
 点击标题栏的 **加号**，或在命令面板中运行 `ZooKeeper: Add Connection...`。
 
+新增连接会打开一个多字段表单，一次填完名称、地址、Chroot、用户名 / 密码、TLS 与会话超时；地址默认填 `localhost:2181` 供你修改。保存前可点击 **Test Connection** 用当前填写的字段（编辑时密码留空则用已保存密码）发起一次真实连接测试，连接失败会就地提示原因。
+
 | 字段 | 说明 | 示例 |
 | --- | --- | --- |
 | 连接名称 | 本地显示的别名 | `开发环境` |
@@ -58,12 +60,12 @@ code --install-extension zk-viewer-vscode.vsix
 
 连接配置保存在 VS Code 工作区状态中；密码使用 VS Code SecretStorage 单独加密保存，不会写入普通配置或日志。通过标题栏的省略号菜单可编辑或删除连接，删除连接时也会清除对应密码。
 
-网络抖动或会话超时后，扩展会自动尝试重连。可通过 `zkViewer.maxReconnectAttempts` 和 `zkViewer.reconnectDelayMs` 调整次数与间隔。
+网络断开时扩展会交给底层库在**观察窗口**内复用当前会话自动恢复（临时节点不丢失）；只有会话真正过期、认证失败或窗口超时才重建会话并停止后台重连，等待手动重新连接。可通过 `zkViewer.maxReconnectAttempts` 与 `zkViewer.reconnectDelayMs` 调整窗口时长（约为二者乘积）。
 
 ### 浏览与排序
 
 - 展开节点时仅加载当前层级，不会一次读取整棵树。
-- 节点图标区分持久、持久顺序、临时和临时顺序节点。
+- 节点图标：普通持久节点按是否有子节点区分为文件夹 / 文件图标；持久顺序、临时、临时顺序节点保留各自的专属图标。
 - 右键节点可新增、编辑、删除、复制路径、搜索子树、导出和刷新。
 - 在标题栏省略号菜单中选择 `Sort Nodes...`，可按名称、创建时间、更新时间正序或倒序排列，也可保留服务器顺序。
 
@@ -94,9 +96,12 @@ code --install-extension zk-viewer-vscode.vsix
 
 非 JSON 文本会自动切换为文本展示；二进制数据以十六进制只读展示。
 
+详情页的数据编辑器（JSON / TXT 切换、换行、一键压缩）被抽取为共用组件，新增节点表单也复用同一套展示与编辑逻辑。
+
 ### 新增与删除节点
 
 右键父节点并选择 `Add Node...`。节点名不能包含 `/`，也不能是 `.` 或 `..`。
+新增节点会打开一个表单弹窗：父路径只读显示（默认当前选中节点），节点名输入，节点类型下拉选择，节点数据区复用详情页的数据编辑器（支持 JSON / TXT 切换、换行开关与一键压缩）。
 
 | 类型 | 行为 |
 | --- | --- |
@@ -110,7 +115,7 @@ code --install-extension zk-viewer-vscode.vsix
 ### 导入与导出
 
 - `Export Node Data...`：导出当前节点。
-- `Export Node and Descendant Data...`：导出当前节点及完整子树。
+- `导出节点及所有子节点数据...`（命令 `Export Node and Descendant Data...`）：导出当前节点及完整子树。
 - 标题栏省略号菜单中的 `Import Node Data...`：读取标准导出 JSON 并恢复节点。
 - `View Import Format`：查看只读格式说明并下载模板。
 

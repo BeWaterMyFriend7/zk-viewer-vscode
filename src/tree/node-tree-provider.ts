@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { ZkClient } from '../zk/zk-client';
+import { formatZkTime } from '../utils/time';
 import { iconForType } from './node-model';
 import {
   getParentDescriptor,
@@ -17,8 +18,12 @@ export class ZkNode extends vscode.TreeItem {
         : vscode.TreeItemCollapsibleState.Collapsed,
     );
     this.contextValue = 'znode';
-    this.iconPath = new vscode.ThemeIcon(iconForType(descriptor.type));
-    this.tooltip = descriptor.path;
+    this.iconPath = new vscode.ThemeIcon(iconForType(descriptor.type, descriptor.isLeaf));
+    const stat = descriptor.stat;
+    this.tooltip =
+      stat === undefined
+        ? descriptor.path
+        : descriptor.path + '\n创建: ' + formatZkTime(stat.ctime) + '\n修改: ' + formatZkTime(stat.mtime);
   }
 }
 
@@ -34,7 +39,15 @@ export class NodeTreeProvider implements vscode.TreeDataProvider<ZkNode> {
 
   async getChildren(element?: ZkNode): Promise<ZkNode[]> {
     if (!element) {
-      return [new ZkNode({ path: '/', name: '/', type: 'persistent', collapsibleState: 'collapsed' })];
+      return [
+        new ZkNode({
+          path: '/',
+          name: '/',
+          type: 'persistent',
+          collapsibleState: 'collapsed',
+          isLeaf: false,
+        }),
+      ];
     }
     const client = this.getClient();
     if (!client) {

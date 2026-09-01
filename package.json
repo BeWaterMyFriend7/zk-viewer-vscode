@@ -92,6 +92,12 @@
     "onCommand:zkViewer.openNodeDetail",
     "onCommand:zkViewer.openNodeDetail.zh",
     "onCommand:zkViewer.openNodeDetail.en",
+    "onCommand:zkViewer.openNodeDetailInNewTab",
+    "onCommand:zkViewer.openNodeDetailInNewTab.zh",
+    "onCommand:zkViewer.openNodeDetailInNewTab.en",
+    "onCommand:zkViewer.closeAllNodeDetails",
+    "onCommand:zkViewer.closeAllNodeDetails.zh",
+    "onCommand:zkViewer.closeAllNodeDetails.en",
     "onCommand:zkViewer.setTreeSort",
     "onCommand:zkViewer.setTreeSort.zh",
     "onCommand:zkViewer.setTreeSort.en",
@@ -354,12 +360,12 @@
       },
       {
         "command": "zkViewer.exportSubtreeData.zh",
-        "title": "导出节点及所有后代数据...",
+        "title": "导出节点及所有子节点数据...",
         "category": "ZooKeeper"
       },
       {
         "command": "zkViewer.exportSubtreeData.en",
-        "title": "Export Node and Descendant Data...",
+        "title": "Export Node and All Child Data...",
         "category": "ZooKeeper"
       },
       {
@@ -411,6 +417,36 @@
       {
         "command": "zkViewer.openNodeDetail.en",
         "title": "Open Details",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.openNodeDetailInNewTab",
+        "title": "%command.openNodeDetailInNewTab.title%",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.openNodeDetailInNewTab.zh",
+        "title": "在新标签页打开详情",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.openNodeDetailInNewTab.en",
+        "title": "Open Details in New Tab",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.closeAllNodeDetails",
+        "title": "%command.closeAllNodeDetails.title%",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.closeAllNodeDetails.zh",
+        "title": "关闭所有详情标签",
+        "category": "ZooKeeper"
+      },
+      {
+        "command": "zkViewer.closeAllNodeDetails.en",
+        "title": "Close All Details",
         "category": "ZooKeeper"
       },
       {
@@ -550,6 +586,16 @@
           "group": "zoo@5"
         },
         {
+          "command": "zkViewer.closeAllNodeDetails.zh",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == zh-cn",
+          "group": "zoo@6"
+        },
+        {
+          "command": "zkViewer.closeAllNodeDetails.en",
+          "when": "view == zkViewer.tree && zkViewer:uiLanguage == en",
+          "group": "zoo@6"
+        },
+        {
           "command": "zkViewer.setLanguage.zh",
           "when": "view == zkViewer.tree && zkViewer:uiLanguage == zh-cn",
           "group": "navigation@6"
@@ -570,6 +616,16 @@
           "command": "zkViewer.openNodeDetail.en",
           "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == en",
           "group": "inline@1"
+        },
+        {
+          "command": "zkViewer.openNodeDetailInNewTab.zh",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == zh-cn",
+          "group": "inline@2"
+        },
+        {
+          "command": "zkViewer.openNodeDetailInNewTab.en",
+          "when": "view == zkViewer.tree && viewItem == znode && zkViewer:uiLanguage == en",
+          "group": "inline@2"
         },
         {
           "command": "zkViewer.addNode.zh",
@@ -798,6 +854,22 @@
           "when": "zkViewer:uiLanguage == en"
         },
         {
+          "command": "zkViewer.openNodeDetailInNewTab.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.openNodeDetailInNewTab.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
+          "command": "zkViewer.closeAllNodeDetails.zh",
+          "when": "zkViewer:uiLanguage == zh-cn"
+        },
+        {
+          "command": "zkViewer.closeAllNodeDetails.en",
+          "when": "zkViewer:uiLanguage == en"
+        },
+        {
           "command": "zkViewer.setTreeSort.zh",
           "when": "zkViewer:uiLanguage == zh-cn"
         },
@@ -883,6 +955,14 @@
         },
         {
           "command": "zkViewer.openNodeDetail",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.openNodeDetailInNewTab",
+          "when": "false"
+        },
+        {
+          "command": "zkViewer.closeAllNodeDetails",
           "when": "false"
         },
         {

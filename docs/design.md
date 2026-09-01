@@ -38,7 +38,7 @@ flowchart LR
   cmds --> conn["connections/ 连接管理"]
   cmds --> tree["tree/ 节点树视图"]
   cmds --> search["search/ 路径与搜索"]
-  cmds --> wv["webview/ 详情编辑面板"]
+  cmds --> wv["webview/ 详情与表单面板"]
   cmds --> ncmd["commands/ 节点增删改"]
   conn --> zk["zk/ 客户端封装（ZkClient 接口）"]
   tree --> zk
@@ -59,10 +59,10 @@ src/
   i18n/                 # 扩展菜单、命令、通知与 Webview 共用的运行时中英文消息
   tree/                 # TreeDataProvider、节点模型、懒加载列表
   search/               # 路径解析、名称/内容搜索
-  webview/              # 详情面板、JSON 工具、消息控制器
+  webview/              # 详情面板、连接/新增节点表单、JSON 工具、消息控制器
   log/                  # 操作日志（内存订阅模型）
   zk/                   # ZkClient 接口、原生封装、Mock 实现
-media/                  # 活动栏图标、Webview 静态资源
+media/                  # 活动栏图标、Webview 静态资源（含共用 data-editor、连接/新增节点表单脚本）
 test/unit|perf|integration/
 ```
 
@@ -73,16 +73,16 @@ test/unit|perf|integration/
 ### 3.1 连接管理（connections/）
 
 - `ConnectionStore`：连接配置持久化到 `workspaceState`，密码单独存 `SecretStorage`，配置中永不出现明文；
-- `ConnectionManager`：连接状态机 `closed → connecting → connected → disconnected → closed`，断线自动重连，达到 `maxReconnectAttempts` 后停止并暴露错误；
 - `SecretStorageWrapper`：带命名空间前缀的密钥封装，便于单元测试注入 Fake；
-- `buildZkConnectionString`：拼接 `hosts[+chroot]`，TLS 时前缀 `ssl://`。
+- `ConnectionManager`：连接状态机 `closed → connecting → connected → disconnected → session-expired → closed`。网络抖动后被判定为「瞬时断连」，由底层库在**观察窗口**（时长 ≈ `maxReconnectAttempts × reconnectDelayMs`）内复用当前会话自动恢复，恢复后状态回到 connected，临时节点不丢失；只有会话真正过期（`session-expired`）、认证失败或窗口超时才关闭底层连接并停止后台重连，等待手动重新连接。手动 `disconnect()` 随时可取消观察窗口。
+- `buildZkConnectionString`：拼接 `hosts[+chroot]`，TLS 时前缀 `ssl://`；连接表单的 **Test Connection** 通过注入的 `testConnection(config, password)` 依赖发起一次真实连接（成功后即关闭），用于保存前校验连通性。
 
 ### 3.2 节点树（tree/）
 
 - `NodeTreeProvider`（TreeDataProvider）：根节点为 `/`，子节点按需展开；
 - `listChildDescriptors`：仅请求当前层级的 `getChildren` + **并发** `getStat`（限流窗口 32）识别类型，满足懒加载，宽层级不再串行化；
 - `treeSort`：子节点支持按名称、创建时间（`ctime`）、更新时间（`mtime`）各升/降序，以及服务器顺序（配置 `zkViewer.treeSort`，默认名称升序；侧边栏菜单「Sort Nodes...」可交互切换）；
-- `node-model`：由 `ephemeralOwner` 与顺序命名（`-\d{10}$`）推导四种节点类型，映射 Codicon。
+- `node-model`：由 `ephemeralOwner`（将 8 字节零值规整为 `0x0`，可用 `isZeroId` 判断）与顺序命名（`-\d{10}$`）推导四种节点类型；`iconForType(type, isLeaf)` 为普通持久节点按是否有子节点映射文件夹 / 文件图标，持久顺序、临时、临时顺序保留专属 Codicon。
 
 **活动栏图标规范：** SVG 必须为单色（`currentColor`）、无背景色块、无渐变，由 VS Code 主题着色，否则在新版 VS Code（尤其 Windows）中不渲染。
 
@@ -100,9 +100,11 @@ test/unit|perf|integration/
 - `json-utils`：数据分类（JSON / 文本 / 二进制含 `\0`），JSON 二空格格式化与安全紧凑化，二进制十六进制视图；
 - `DetailPanelController`：vscode 无关的消息协议，`loadData → save → saved/error`，保存携带 `stat.version` 乐观锁，`BadVersion` 冲突不覆盖并返回错误；保存前经 `nodeExists` 预检，删除 / 冲突错误通过 `notifyError` 弹出 VS Code 通知；打开节点时注册一次性数据 watch（`watchNode`），收到删除事件即报错并回调 `onNodeDeleted` 关闭面板，其他事件后自动重新武装以持续监测；
 - `NodeDetailPanel`：Webview 面板（CSP nonce + localResourceRoots），与控制器桥接；原始数据与展示文本分离，支持 JSON / TXT 模式、换行开关与一键紧凑化，JSON 模式保存前紧凑序列化，TXT 模式原样保存；**默认只读**，必须点击「Edit」按钮才进入编辑模式（防误触），二进制数据始终只读；面板销毁时调用 `controller.dispose()` 停止响应陈旧 watch 事件。
+- `data-editor.js`（`window.zkDataEditor.create(options)`）：**共用数据编辑器**，将数据区的 JSON 紧凑 / 格式化、JSON / TXT 切换、换行开关、一键压缩与草稿捕获抽为无 VS Code 依赖的前端模块；详情面板与新增节点表单通过既定 DOM id（`data`、`display-json`、`display-text`、`toggle-wrap`、`compact-json`、`status`）复用同一套展示与编辑逻辑。
 
 ### 3.5 节点操作（commands/）
 
+- `NodeCreatePanel`：**新增节点表单** Webview，字段为只读父路径、节点名、类型下拉与数据区（复用 `data-editor.js`）；保存时经 `validateNodeName` 校验后调用 `client.create(fullPath, data, mode)`；交互式入口（无 `options`）打开表单，程序化入口（命令带 `options.name/mode/data`）走直接创建路径以兼容测试与命令。
 - `validateNodeName`：拒绝空名、`/`、`.`、`..`；
 - `collectNodeDataExport`：使用显式栈遍历节点，单节点模式只读取当前路径，子树模式读取全部后代；导出项包含完整路径，数据按 UTF-8 / Base64 自适应编码以保证无损；
 - `parseNodeDataImport`：严格校验导出格式版本、固定字段、规范路径、根路径范围、重复项与 Base64 编码，拒绝未知字段并解码为无损 Buffer；
@@ -152,6 +154,11 @@ test/unit|perf|integration/
 | `save` | Webview → 扩展 | `{ type, path, text, version }` |
 | `saved` | 扩展 → Webview | `{ type, path }` |
 | `error` | 扩展 → Webview | `{ type, message, code? }` |
+| `save`（连接表单） | Webview → 扩展 | `{ type, state, newPassword? }` |
+| `test`（连接表单） | Webview → 扩展 | `{ type, state, newPassword? }` |
+| `testResult` | 扩展 → Webview | `{ type, ok, message }` |
+| `create`（新增节点） | Webview → 扩展 | `{ type, name, mode, data }` |
+| `nodeCreateError` | 扩展 → Webview | `{ type, message }` |
 
 ### 5.2 连接串与认证
 

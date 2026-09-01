@@ -52,4 +52,15 @@ suite('Connection management (mock)', () => {
     await api.store.remove('t1');
     assert.strictEqual((await api.store.list()).length, 0);
   });
+
+  test('add connection opens a multi-field form', async () => {
+    await api.store.clear();
+    await vscode.commands.executeCommand('zkViewer.addConnection');
+    const html = api.connectionFormHtml() ?? '';
+    assert.ok(html.includes('id="f-name"'), 'form should include a name field');
+    assert.ok(html.includes('id="f-hosts"'), 'form should include a hosts field');
+    assert.ok(html.includes('id="f-secure"'), 'form should include a TLS selector');
+    assert.ok(html.includes('id="save"'), 'form should include a save button');
+    assert.ok(html.includes('id="cancel"'), 'form should include a cancel button');
+  });
 });

@@ -36,26 +36,42 @@ function webviewMessages(messages: DetailMessages): Record<string, unknown> {
 }
 
 export class NodeDetailPanel {
-  private static current: NodeDetailPanel | undefined;
+  private static readonly panels = new Set<NodeDetailPanel>();
 
   static getController(): DetailPanelController | undefined {
-    return NodeDetailPanel.current?.controller;
+    return NodeDetailPanel.mostRecent()?.controller;
   }
 
   static getCurrentHtml(): string | undefined {
-    return NodeDetailPanel.current?.panel.webview.html;
+    return NodeDetailPanel.mostRecent()?.panel.webview.html;
+  }
+
+  static getAllControllers(): DetailPanelController[] {
+    return [...NodeDetailPanel.panels].map((panel) => panel.controller);
+  }
+
+  static closeAll(): void {
+    for (const panel of [...NodeDetailPanel.panels]) {
+      panel.disposePanel();
+    }
   }
 
   static refresh(messages: ImportExportMessages): void {
-    if (!NodeDetailPanel.current) {
-      return;
+    for (const panel of NodeDetailPanel.panels) {
+      panel.messages = messages;
+      panel.controller.setMessages(messages.detail);
+      void panel.panel.webview.postMessage({
+        type: 'languageChanged',
+        messages: webviewMessages(messages.detail),
+      });
     }
-    NodeDetailPanel.current.messages = messages;
-    NodeDetailPanel.current.controller.setMessages(messages.detail);
-    void NodeDetailPanel.current.panel.webview.postMessage({
-      type: 'languageChanged',
-      messages: webviewMessages(messages.detail),
-    });
+  }
+
+  private static mostRecent(): NodeDetailPanel | undefined {
+    if (NodeDetailPanel.panels.size === 0) {
+      return undefined;
+    }
+    return [...NodeDetailPanel.panels][NodeDetailPanel.panels.size - 1];
   }
 
   private readonly panel: vscode.WebviewPanel;
@@ -66,11 +82,12 @@ export class NodeDetailPanel {
     path: string,
     private messages: ImportExportMessages,
     deps: DetailPanelDeps,
+    private readonly newTab: boolean,
   ) {
     this.panel = vscode.window.createWebviewPanel(
       'zkViewer.nodeDetail',
       `ZooKeeper: ${path}`,
-      vscode.ViewColumn.Two,
+      this.newTab ? vscode.ViewColumn.Active : vscode.ViewColumn.Two,
       {
         enableScripts: true,
         retainContextWhenHidden: true,
@@ -100,14 +117,13 @@ export class NodeDetailPanel {
     this.panel.webview.html = this.buildHtml(this.panel.webview, path);
     this.panel.onDidDispose(() => {
       this.controller.dispose();
-      if (NodeDetailPanel.current === this) {
-        NodeDetailPanel.current = undefined;
-      }
+      NodeDetailPanel.panels.delete(this);
     });
     this.panel.webview.onDidReceiveMessage((message) => {
       void this.controller.handleMessage(message);
     });
     void this.controller.load(path);
+    NodeDetailPanel.panels.add(this);
   }
 
   static async open(
@@ -116,24 +132,38 @@ export class NodeDetailPanel {
     path: string,
     messages: ImportExportMessages,
     extra?: Partial<DetailPanelDeps>,
+    newTab = false,
   ): Promise<NodeDetailPanel> {
-    if (NodeDetailPanel.current) {
-      NodeDetailPanel.current.panel.dispose();
+    if (!newTab) {
+      // Preserve the original single-tab behaviour: replace any open panels.
+      NodeDetailPanel.closeAll();
     }
-    const panel = new NodeDetailPanel(context, path, messages, {
-      getNodeData: (nodePath) => client.getData(nodePath),
-      saveNodeData: (nodePath, data, version) => client.setData(nodePath, data, version),
-      watchNode: (nodePath, onEvent) => client.watchData(nodePath, onEvent),
-      ...extra,
-    });
-    NodeDetailPanel.current = panel;
+    const panel = new NodeDetailPanel(
+      context,
+      path,
+      messages,
+      {
+        getNodeData: (nodePath) => client.getData(nodePath),
+        saveNodeData: (nodePath, data, version) => client.setData(nodePath, data, version),
+        watchNode: (nodePath, onEvent) => client.watchData(nodePath, onEvent),
+        ...extra,
+      },
+      newTab,
+    );
     return panel;
+  }
+
+  private disposePanel(): void {
+    this.panel.dispose();
   }
 
   private buildHtml(webview: vscode.Webview, path: string): string {
     const messages = this.messages.detail;
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'detail.js'),
+    );
+    const dataEditorScriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'media', 'data-editor.js'),
     );
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'styles.css'),
@@ -187,6 +217,7 @@ export class NodeDetailPanel {
     </section>
   </main>
   <script nonce="${nonce}">window.zkViewerDetailMessages = ${initialMessages};</script>
+  <script nonce="${nonce}" src="${dataEditorScriptUri}"></script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
