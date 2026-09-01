@@ -65,6 +65,8 @@ export interface NodeMessages {
   sidebarNotOpen: string;
   parentPathTitle: string;
   nameTitle(parentPath: string): string;
+  /** Fixed label for the node-name input in the create form. */
+  nodeNameLabel: string;
   typePrompt: string;
   typeLabels: Record<'PERSISTENT' | 'PERSISTENT_SEQUENTIAL' | 'EPHEMERAL' | 'EPHEMERAL_SEQUENTIAL', string>;
   dataOptionalTitle: string;
@@ -202,7 +204,7 @@ const english: ImportExportMessages = {
     removeConnectionPrompt: 'Remove connection',
     removeConnectionConfirm: (name) => `Remove connection "${name}"?`,
     removeButton: 'Remove',
-    formTitle: 'Connection',
+    formTitle: 'New Connection',
     sessionTimeoutTitle: 'Session timeout (ms)',
     saveButton: 'Save',
     cancelButton: 'Cancel',
@@ -242,6 +244,7 @@ const english: ImportExportMessages = {
     sidebarNotOpen: 'The ZooKeeper sidebar is not open. Open it before locating a node.',
     parentPathTitle: 'Parent path',
     nameTitle: (parentPath) => `Node name under ${parentPath}`,
+    nodeNameLabel: 'New Node Name',
     typePrompt: 'Node type',
     typeLabels: {
       PERSISTENT: 'Persistent',
@@ -425,7 +428,7 @@ const chinese: ImportExportMessages = {
     removeConnectionPrompt: '选择要删除的连接',
     removeConnectionConfirm: (name) => `确定删除连接“${name}”吗？`,
     removeButton: '删除',
-    formTitle: '连接',
+    formTitle: '新建连接',
     sessionTimeoutTitle: '会话超时（毫秒）',
     saveButton: '保存',
     cancelButton: '取消',
@@ -465,6 +468,7 @@ const chinese: ImportExportMessages = {
     sidebarNotOpen: 'ZooKeeper 侧边栏未打开，无法定位节点，请先打开侧边栏再试。',
     parentPathTitle: '父节点路径',
     nameTitle: (parentPath) => `在 ${parentPath} 下新增节点`,
+    nodeNameLabel: '新增节点名称',
     typePrompt: '选择节点类型',
     typeLabels: {
       PERSISTENT: '持久节点',

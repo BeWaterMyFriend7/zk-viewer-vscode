@@ -288,6 +288,20 @@ button:focus-visible,
   font-size: var(--vscode-font-size);
 }
 
+.static-value {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-input-border));
+  border-radius: 4px;
+  color: var(--vscode-descriptionForeground);
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  cursor: default;
+  user-select: text;
+}
+
 .form-error {
   min-height: 18px;
   color: var(--vscode-errorForeground);

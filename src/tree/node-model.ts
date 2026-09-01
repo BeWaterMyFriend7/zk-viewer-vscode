@@ -38,6 +38,24 @@ export function iconForType(type: NodeType, isLeaf = false): string {
 }
 
 /**
+ * Optional VS Code ThemeColor key to tint the tree icon so leaves, branches
+ * and node types are visually distinct. Keys come from the built-in color
+ * registry; unsupported keys fall back to the default icon color.
+ */
+export function iconColorForType(type: NodeType, isLeaf = false): string | undefined {
+  switch (type) {
+    case 'persistent':
+      return isLeaf ? 'symbolIcon.fileForeground' : 'symbolIcon.folderForeground';
+    case 'persistent_sequential':
+      return 'charts.blue';
+    case 'ephemeral':
+      return 'charts.red';
+    case 'ephemeral_sequential':
+      return 'charts.purple';
+  }
+}
+
+/**
  * True when an ephemeralOwner string represents a zero (i.e. a persistent
  * node). Accepts plain numbers, '0x' hex with or without leading zeros, and
  * an empty/undefined owner which is also treated as non-ephemeral.

@@ -171,10 +171,10 @@ export class NodeCreatePanel {
     <form id="node-create-form" class="form-card">
       <label>
         <span>${escapeHtml(messages.parentPathTitle)}</span>
-        <input id="n-parent" type="text" value="${escapeHtml(this.parentPath)}" readonly>
+        <div class="static-value">${escapeHtml(this.parentPath)}</div>
       </label>
       <label>
-        <span>${escapeHtml(messages.nameTitle(this.parentPath))}</span>
+        <span>${escapeHtml(messages.nodeNameLabel)}</span>
         <input id="n-name" type="text" value="${escapeHtml(initial.name ?? '')}" required>
       </label>
       <label>

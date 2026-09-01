@@ -82,7 +82,7 @@ test/unit|perf|integration/
 - `NodeTreeProvider`（TreeDataProvider）：根节点为 `/`，子节点按需展开；
 - `listChildDescriptors`：仅请求当前层级的 `getChildren` + **并发** `getStat`（限流窗口 32）识别类型，满足懒加载，宽层级不再串行化；
 - `treeSort`：子节点支持按名称、创建时间（`ctime`）、更新时间（`mtime`）各升/降序，以及服务器顺序（配置 `zkViewer.treeSort`，默认名称升序；侧边栏菜单「Sort Nodes...」可交互切换）；
-- `node-model`：由 `ephemeralOwner`（将 8 字节零值规整为 `0x0`，可用 `isZeroId` 判断）与顺序命名（`-\d{10}$`）推导四种节点类型；`iconForType(type, isLeaf)` 为普通持久节点按是否有子节点映射文件夹 / 文件图标，持久顺序、临时、临时顺序保留专属 Codicon。
+ `node-model`：由 `ephemeralOwner`（将 8 字节零值规整为 `0x0`，可用 `isZeroId` 判断）与顺序命名（`-\d{10}$`）推导四种节点类型；`iconForType(type, isLeaf)` 为普通持久节点按是否有子节点映射文件夹 / 文件图标，持久顺序、临时、临时顺序保留专属 Codicon；`iconColorForType(type, isLeaf)` 返回 VS Code 主题色键（文件夹 / 文件用 `symbolIcon.*Foreground`，其它类型用 `charts.*`），在 `NodeTreeProvider` 中通过 `new ThemeIcon(id, new ThemeColor(key))` 给图标着色以增强区分。
 
 **活动栏图标规范：** SVG 必须为单色（`currentColor`）、无背景色块、无渐变，由 VS Code 主题着色，否则在新版 VS Code（尤其 Windows）中不渲染。
 

@@ -82,7 +82,8 @@ suite('Node actions (mock)', () => {
     assert.ok(html.includes('id="n-name"'), 'create form should include a name field');
     assert.ok(html.includes('id="n-mode"'), 'create form should include a mode selector');
     assert.ok(html.includes('id="data"'), 'create form should include a data editor');
-    assert.ok(html.includes('value="/app"'), 'create form should prefill the read-only parent path');
+    assert.ok(html.includes('class="static-value"'), 'create form should show parent path as static text');
+    assert.ok(html.includes('/app'), 'create form should show the parent path value');
 
     await vscode.commands.executeCommand('zkViewer.disconnect');
   });

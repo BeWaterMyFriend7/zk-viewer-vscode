@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import {
   detectNodeType,
   iconForType,
+  iconColorForType,
   isSequentialName,
   isZeroId,
   type NodeType,
@@ -53,5 +54,13 @@ describe('node model', () => {
     assert.strictEqual(iconForType('persistent', false), 'symbol-folder');
     assert.strictEqual(iconForType('persistent_sequential', true), 'symbol-structure');
     assert.strictEqual(iconForType('ephemeral', true), 'symbol-event');
+  });
+
+  it('returns a distinct theme color key for each node type', () => {
+    assert.strictEqual(iconColorForType('persistent', true), 'symbolIcon.fileForeground');
+    assert.strictEqual(iconColorForType('persistent', false), 'symbolIcon.folderForeground');
+    assert.strictEqual(iconColorForType('persistent_sequential', false), 'charts.blue');
+    assert.strictEqual(iconColorForType('ephemeral', false), 'charts.red');
+    assert.strictEqual(iconColorForType('ephemeral_sequential', false), 'charts.purple');
   });
 });

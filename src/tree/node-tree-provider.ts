@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { ZkClient } from '../zk/zk-client';
 import { formatZkTime } from '../utils/time';
-import { iconForType } from './node-model';
+import { iconColorForType, iconForType } from './node-model';
 import {
   getParentDescriptor,
   listChildDescriptors,
@@ -18,7 +18,11 @@ export class ZkNode extends vscode.TreeItem {
         : vscode.TreeItemCollapsibleState.Collapsed,
     );
     this.contextValue = 'znode';
-    this.iconPath = new vscode.ThemeIcon(iconForType(descriptor.type, descriptor.isLeaf));
+    const colorKey = iconColorForType(descriptor.type, descriptor.isLeaf);
+    this.iconPath = new vscode.ThemeIcon(
+      iconForType(descriptor.type, descriptor.isLeaf),
+      colorKey ? new vscode.ThemeColor(colorKey) : undefined,
+    );
     const stat = descriptor.stat;
     this.tooltip =
       stat === undefined

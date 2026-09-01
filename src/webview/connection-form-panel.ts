@@ -175,11 +175,11 @@ export class ConnectionFormPanel {
     const initial = this.args.initial;
     const state: FormState = {
       name: initial?.name ?? '',
-      hosts: initial?.hosts ?? '',
+      hosts: initial?.hosts ?? 'localhost:2181',
       chroot: initial?.chroot ?? '',
       username: initial?.username ?? '',
       secure: initial?.secure ?? false,
-      sessionTimeoutMs: initial?.sessionTimeoutMs ?? 10000,
+      sessionTimeoutMs: initial?.sessionTimeoutMs ?? 3000,
     };
     this.panel.webview.html = this.buildHtml(this.panel.webview, state);
   }
