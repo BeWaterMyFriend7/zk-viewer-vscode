@@ -30,4 +30,9 @@
   "configuration.treeSort.description": "子节点排序方式。",
   "configuration.uiLanguage.description": "ZooKeeper Viewer 所有按钮、对话框、通知和详情页使用的语言；自动模式跟随 VS Code 显示语言。",
   "configuration.dev.useMockClient.description": "仅用于开发和测试：使用内存 Mock ZooKeeper 客户端。"
+  ,"color.zkViewer.icon.folder.description": "文件夹（分支）节点图标颜色。"
+  ,"color.zkViewer.icon.file.description": "文件（叶子）节点图标颜色。"
+  ,"color.zkViewer.icon.sequential.description": "顺序节点图标颜色。"
+  ,"color.zkViewer.icon.ephemeral.description": "临时节点图标颜色。"
+  ,"color.zkViewer.icon.ephemeralSequential.description": "临时顺序节点图标颜色。"
 }

@@ -27,13 +27,15 @@ export function detectNodeType(stat: Pick<ZnodeStat, 'ephemeralOwner'>, name: st
 export function iconForType(type: NodeType, isLeaf = false): string {
   switch (type) {
     case 'persistent':
-      return isLeaf ? 'symbol-file' : 'symbol-folder';
+      // Use non 'symbol-*' codicons so the ThemeColor is not overridden by the
+      // codicon's !important CSS rule, which affects the symbol-* product icons.
+      return isLeaf ? 'file' : 'folder';
     case 'persistent_sequential':
-      return 'symbol-structure';
+      return 'list-ordered';
     case 'ephemeral':
-      return 'symbol-event';
+      return 'pulse';
     case 'ephemeral_sequential':
-      return 'symbol-class';
+      return 'plug';
   }
 }
 
@@ -45,13 +47,13 @@ export function iconForType(type: NodeType, isLeaf = false): string {
 export function iconColorForType(type: NodeType, isLeaf = false): string | undefined {
   switch (type) {
     case 'persistent':
-      return isLeaf ? 'symbolIcon.fileForeground' : 'symbolIcon.folderForeground';
+      return isLeaf ? 'zkViewer.icon.file' : 'zkViewer.icon.folder';
     case 'persistent_sequential':
-      return 'charts.blue';
+      return 'zkViewer.icon.sequential';
     case 'ephemeral':
-      return 'charts.red';
+      return 'zkViewer.icon.ephemeral';
     case 'ephemeral_sequential':
-      return 'charts.purple';
+      return 'zkViewer.icon.ephemeralSequential';
   }
 }
 

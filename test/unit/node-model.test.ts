@@ -45,22 +45,22 @@ describe('node model', () => {
     const icons = types.map((type) => iconForType(type));
     assert.strictEqual(new Set(icons).size, 4, 'each type needs a distinct icon');
     for (const icon of icons) {
-      assert.match(icon, /^symbol-/);
+      assert.ok(icon.length > 0, 'each icon must be a non-empty codicon id');
     }
   });
 
   it('uses a file icon for a leaf persistent node and a folder for a branch', () => {
-    assert.strictEqual(iconForType('persistent', true), 'symbol-file');
-    assert.strictEqual(iconForType('persistent', false), 'symbol-folder');
-    assert.strictEqual(iconForType('persistent_sequential', true), 'symbol-structure');
-    assert.strictEqual(iconForType('ephemeral', true), 'symbol-event');
+    assert.strictEqual(iconForType('persistent', true), 'file');
+    assert.strictEqual(iconForType('persistent', false), 'folder');
+    assert.strictEqual(iconForType('persistent_sequential', true), 'list-ordered');
+    assert.strictEqual(iconForType('ephemeral', true), 'pulse');
   });
 
   it('returns a distinct theme color key for each node type', () => {
-    assert.strictEqual(iconColorForType('persistent', true), 'symbolIcon.fileForeground');
-    assert.strictEqual(iconColorForType('persistent', false), 'symbolIcon.folderForeground');
-    assert.strictEqual(iconColorForType('persistent_sequential', false), 'charts.blue');
-    assert.strictEqual(iconColorForType('ephemeral', false), 'charts.red');
-    assert.strictEqual(iconColorForType('ephemeral_sequential', false), 'charts.purple');
+    assert.strictEqual(iconColorForType('persistent', true), 'zkViewer.icon.file');
+    assert.strictEqual(iconColorForType('persistent', false), 'zkViewer.icon.folder');
+    assert.strictEqual(iconColorForType('persistent_sequential', false), 'zkViewer.icon.sequential');
+    assert.strictEqual(iconColorForType('ephemeral', false), 'zkViewer.icon.ephemeral');
+    assert.strictEqual(iconColorForType('ephemeral_sequential', false), 'zkViewer.icon.ephemeralSequential');
   });
 });
