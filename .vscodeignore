@@ -4,7 +4,6 @@ out/test/**
 src/**
 test/**
 scripts/**
-docs/**
 .code/**
 .github/**
 coverage/**
@@ -20,3 +19,5 @@ AGENTS.md
 eslint.config.mjs
 tsconfig.json
 media/icon-source.svg
+docs/REQUIREMENTS.md
+docs/design.md

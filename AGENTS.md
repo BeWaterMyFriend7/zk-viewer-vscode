@@ -13,7 +13,6 @@ zk-viewer-vscode 是一个 VS Code 扩展，为 Apache ZooKeeper 提供轻量级
 - `test/` — 在扩展开发宿主（Extension Development Host）中运行的集成测试
 - `docs/` — `REQUIREMENTS.md`（需求文档）与 `design.md`（架构与设计决策）
 - `package.json` — 扩展清单：贡献点、激活事件、命令与配置
-- `.vscode/` — 共享的调试启动与任务配置
 
 逻辑应放在 `src/` 下职责单一的小模块中（如 `src/tree/`、`src/commands/`），避免文件过大。
 
@@ -25,7 +24,6 @@ zk-viewer-vscode 是一个 VS Code 扩展，为 Apache ZooKeeper 提供轻量级
 - `npm run test:perf` — 运行懒加载性能断言（500 个子节点层级耗时低于 500ms）
 - `npm run test:unit:cov` — 运行单元测试并输出 c8 覆盖率报告
 - `npm run lint` — 运行 ESLint
-- 在 VS Code 中按 `F5` — 启动扩展开发宿主进行手动测试
 - `vsce package` — 打包可安装的 `.vsix` 文件
 
 ## 编码风格与命名约定

@@ -1,12 +1,12 @@
+[中文](README.md) | [English](docs/README.en.md)
+
 # ZooKeeper Viewer
 
 在 VS Code 内直接浏览和管理 Apache ZooKeeper。无需额外部署 Web 控制台，即可完成多连接管理、节点搜索、JSON/TXT 查看与编辑、节点增删，以及子树导入导出。
 
-> English summary is available in [English](#english).
-
 ![ZooKeeper Viewer feature demo](media/demo.gif)
 
-The demo shows the complete ZooKeeper view toolbar (add connection, search, refresh, connect/disconnect, language, and the **More Actions** menu), every node context-menu action, node details, and the search flow from selecting a mode through locating a result. The **More Actions** menu includes connection editing/removal, sorting, node-data import, and import-format help. The node context menu includes details, add, edit, delete, copy path, node/subtree export, refresh, and subtree search.
+演示展示了完整的 ZooKeeper 视图工具栏（新增连接、搜索、刷新、连接/断开、语言和“更多操作”菜单）、所有节点右键操作、节点详情，以及从选择搜索模式到定位结果的完整流程。“更多操作”菜单包含连接编辑/删除、排序、节点数据导入和导入格式帮助；节点右键菜单包含详情、新增、编辑、删除、复制路径、节点/子树导出、刷新和子树搜索。
 
 ## 为什么使用
 
@@ -154,18 +154,8 @@ code --install-extension zk-viewer-vscode.vsix
 
 ## 支持与反馈
 
-遇到问题请查看 [支持说明](SUPPORT.md)，或提交 [GitHub Issue](https://github.com/BeWaterMyFriend7/zk-viewer-vscode/issues)。
+遇到问题请查看 [支持说明](docs/SUPPORT.md)，或提交 [GitHub Issue](https://github.com/BeWaterMyFriend7/zk-viewer-vscode/issues)。
 
 ## 许可证
 
 [Apache License 2.0](LICENSE)
-
-## English
-
-ZooKeeper Viewer is a lightweight Apache ZooKeeper client for VS Code. It supports multiple connections, digest authentication, TLS, lazy tree browsing, path and content search, safe JSON/TXT editing with version checks, node management, subtree import/export, and Chinese/English UI.
-
-Open the ZooKeeper view from the Activity Bar, add a connection with the **+** button, connect, and expand the tree. Node details are read-only until you explicitly select **Edit**. Passwords are stored with VS Code SecretStorage, and the extension does not include telemetry.
-
-Requirements: VS Code 1.60.0+, Apache ZooKeeper 3.4+, Windows/macOS/Linux.
-
-For help, see [SUPPORT.md](SUPPORT.md) or open a [GitHub issue](https://github.com/BeWaterMyFriend7/zk-viewer-vscode/issues).
