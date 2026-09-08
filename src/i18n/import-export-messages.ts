@@ -99,6 +99,7 @@ export interface DetailMessages {
   documentTitle: string;
   eyebrow: string;
   informationHeading: string;
+  detailsSummary: string;
   dataHeading: string;
   displayLabel: string;
   displayModeAria: string;
@@ -110,6 +111,14 @@ export interface DetailMessages {
   save: string;
   readOnlyLabel: string;
   statLabels: Record<string, string>;
+  persistentNode: string;
+  ephemeralNode(sessionId: string): string;
+  dataSize(bytes: number | string, kibibytes: number | string): string;
+  leafNode(count: number | string): string;
+  childCount(count: number | string): string;
+  dataVersion(version: number | string): string;
+  childVersion(version: number | string): string;
+  aclVersion(version: number | string): string;
   kindReadOnly(kind: string): string;
   editingStatus: string;
   readOnlyStatus: string;
@@ -291,6 +300,7 @@ const english: ImportExportMessages = {
     documentTitle: 'Node detail',
     eyebrow: 'ZooKeeper Node',
     informationHeading: 'Node information',
+    detailsSummary: 'Details',
     dataHeading: 'Node data',
     displayLabel: 'Display',
     displayModeAria: 'Display mode',
@@ -302,18 +312,34 @@ const english: ImportExportMessages = {
     save: 'Save',
     readOnlyLabel: 'Read-only',
     statLabels: {
-      path: 'path',
-      version: 'version',
-      cversion: 'cversion',
-      aversion: 'aversion',
-      dataLength: 'dataLength',
-      numChildren: 'numChildren',
-      ephemeralOwner: 'ephemeralOwner',
-      mtime: 'mtime',
-      ctime: 'ctime',
-      czxid: 'czxid',
-      mzxid: 'mzxid',
+      nodeType: 'Node type',
+      version: 'Data version',
+      cversion: 'Children version',
+      aversion: 'ACL version',
+      dataLength: 'Data size',
+      numChildren: 'Direct children',
+      mtime: 'Modified',
+      ctime: 'Created',
+      czxid: 'Created transaction ID',
+      mzxid: 'Modified transaction ID',
     },
+    persistentNode: 'Persistent node',
+    ephemeralNode: (sessionId) => `Ephemeral node (session ID: ${sessionId})`,
+    dataSize: (bytes, kibibytes) => `${bytes} B (${kibibytes} KiB)`,
+    leafNode: (count) => `${count} (leaf node)`,
+    childCount: (count) => `${count}`,
+    dataVersion: (version) =>
+      Number(version) === 0
+        ? `${version} (data unchanged)`
+        : `${version} (data changed ${version} ${Number(version) === 1 ? 'time' : 'times'})`,
+    childVersion: (version) =>
+      Number(version) === 0
+        ? `${version} (children unchanged)`
+        : `${version} (children changed ${version} ${Number(version) === 1 ? 'time' : 'times'})`,
+    aclVersion: (version) =>
+      Number(version) === 0
+        ? `${version} (ACL unchanged)`
+        : `${version} (ACL changed ${version} ${Number(version) === 1 ? 'time' : 'times'})`,
     kindReadOnly: (kind) => `${kind} (read-only)`,
     editingStatus: 'Editing — changes apply on Save',
     readOnlyStatus: 'Read-only — click Edit to modify',
@@ -515,6 +541,7 @@ const chinese: ImportExportMessages = {
     documentTitle: '节点详情',
     eyebrow: 'ZooKeeper 节点',
     informationHeading: '节点信息',
+    detailsSummary: '详细信息',
     dataHeading: '节点数据',
     displayLabel: '显示',
     displayModeAria: '显示模式',
@@ -526,18 +553,28 @@ const chinese: ImportExportMessages = {
     save: '保存',
     readOnlyLabel: '只读',
     statLabels: {
-      path: '路径',
-      version: '版本',
+      nodeType: '节点类型',
+      version: '数据版本',
       cversion: '子节点版本',
       aversion: 'ACL 版本',
-      dataLength: '数据长度',
-      numChildren: '子节点数',
-      ephemeralOwner: '临时节点所有者',
+      dataLength: '数据大小',
+      numChildren: '直接子节点',
       mtime: '修改时间',
       ctime: '创建时间',
-      czxid: 'czxid',
-      mzxid: 'mzxid',
+      czxid: '创建事务 ID',
+      mzxid: '修改事务 ID',
     },
+    persistentNode: '持久节点',
+    ephemeralNode: (sessionId) => `临时节点（会话 ID：${sessionId}）`,
+    dataSize: (bytes, kibibytes) => `${bytes} B（${kibibytes} KiB）`,
+    leafNode: (count) => `${count}（叶子节点）`,
+    childCount: (count) => `${count}`,
+    dataVersion: (version) =>
+      Number(version) === 0 ? `${version}（数据未发生变更）` : `${version}（数据修改过 ${version} 次）`,
+    childVersion: (version) =>
+      Number(version) === 0 ? `${version}（子节点未发生变更）` : `${version}（子节点变更过 ${version} 次）`,
+    aclVersion: (version) =>
+      Number(version) === 0 ? `${version}（ACL 未发生变更）` : `${version}（ACL 修改过 ${version} 次）`,
     kindReadOnly: (kind) => `${kind}（只读）`,
     editingStatus: '正在编辑——点击“保存”应用修改',
     readOnlyStatus: '只读——点击“编辑”后可修改',

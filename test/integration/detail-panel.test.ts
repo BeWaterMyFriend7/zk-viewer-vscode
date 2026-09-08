@@ -37,9 +37,21 @@ suite('Detail panel (mock)', () => {
     assert.ok(html.includes('id="toggle-wrap"'), 'the panel should provide a line-wrap button');
     assert.ok(html.includes('id="compact-json"'), 'the panel should provide a compact JSON button');
     assert.ok(html.includes('class="detail-shell"'), 'the panel should use the compact detail layout');
-    assert.ok(html.includes('class="stat-card"'), 'node metadata should be grouped in a card');
+    assert.ok(html.includes('<details class="stat-card">'), 'node metadata should be collapsed by default');
+    assert.ok(html.includes('class="stat-summary"'), 'node metadata should use a compact summary row');
+    assert.ok(
+      !html.includes('<details class="stat-card" open'),
+      'node metadata should not be expanded initially',
+    );
+    assert.ok(html.includes('id="path"'), 'the node path should remain visible');
+    assert.ok(html.includes('title="/app/config"'), 'the full node path should be available on hover');
+    assert.ok(!html.includes('class="eyebrow"'), 'the redundant ZooKeeper node label should be removed');
+    assert.ok(!html.includes('id="data-heading"'), 'the redundant node data heading should be removed');
     assert.ok(html.includes('class="segmented-control"'), 'display modes should be grouped together');
-    assert.ok(html.includes('class="action-bar"'), 'editing actions should have a separate footer');
+    assert.ok(
+      html.includes('class="toolbar-separator"'),
+      'editing actions should be separated from display controls',
+    );
 
     await controller?.handleMessage({
       type: 'save',
@@ -124,27 +136,10 @@ suite('Detail panel (mock)', () => {
         descriptor: { path: '/localized' },
       });
       const html = api.detailPanelHtml() ?? '';
-      for (const expected of [
-        '节点信息',
-        '节点数据',
-        '显示',
-        '换行：开',
-        '压缩 JSON',
-        '编辑',
-        '保存',
-        '只读',
-      ]) {
+      for (const expected of ['详细信息', '显示', '换行：开', '压缩 JSON', '编辑', '保存', '只读']) {
         assert.ok(html.includes(expected), `detail panel should include Chinese text: ${expected}`);
       }
-      for (const english of [
-        'Node information',
-        'Node data',
-        'Display',
-        'Wrap: On',
-        'Minify JSON',
-        '>Edit<',
-        '>Save<',
-      ]) {
+      for (const english of ['Details', 'Display', 'Wrap: On', 'Minify JSON', '>Edit<', '>Save<']) {
         assert.ok(!html.includes(english), `detail panel should not include English UI text: ${english}`);
       }
     } finally {

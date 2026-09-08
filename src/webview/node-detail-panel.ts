@@ -18,12 +18,33 @@ function webviewMessages(messages: DetailMessages): Record<string, unknown> {
     edit: messages.edit,
     save: messages.save,
     informationHeading: messages.informationHeading,
+    detailsSummary: messages.detailsSummary,
     dataHeading: messages.dataHeading,
     displayLabel: messages.displayLabel,
     displayModeAria: messages.displayModeAria,
     dataPlaceholder: messages.dataPlaceholder,
     readOnlyLabel: messages.readOnlyLabel,
     statLabels: messages.statLabels,
+    persistentNode: messages.persistentNode,
+    ephemeralNode: messages.ephemeralNode('{sessionId}'),
+    dataSize: messages.dataSize('{bytes}', '{kibibytes}'),
+    leafNode: messages.leafNode('{count}'),
+    childCount: messages.childCount('{count}'),
+    dataVersion: {
+      zero: messages.dataVersion(0),
+      one: messages.dataVersion(1),
+      many: messages.dataVersion('{version}'),
+    },
+    childVersion: {
+      zero: messages.childVersion(0),
+      one: messages.childVersion(1),
+      many: messages.childVersion('{version}'),
+    },
+    aclVersion: {
+      zero: messages.aclVersion(0),
+      one: messages.aclVersion(1),
+      many: messages.aclVersion('{version}'),
+    },
     kindReadOnly: messages.kindReadOnly('{kind}'),
     editingStatus: messages.editingStatus,
     readOnlyStatus: messages.readOnlyStatus,
@@ -86,7 +107,7 @@ export class NodeDetailPanel {
   ) {
     this.panel = vscode.window.createWebviewPanel(
       'zkViewer.nodeDetail',
-      `ZooKeeper: ${path}`,
+      path,
       this.newTab ? vscode.ViewColumn.Active : vscode.ViewColumn.Two,
       {
         enableScripts: true,
@@ -182,18 +203,21 @@ export class NodeDetailPanel {
 <body>
   <main class="detail-shell">
     <header class="detail-header">
-      <span class="eyebrow">${escapeHtml(messages.eyebrow)}</span>
-      <h1 id="path">${escapeHtml(path)}</h1>
+      <div id="path" title="${escapeHtml(path)}">${escapeHtml(path)}</div>
     </header>
 
-    <section class="stat-card" aria-labelledby="stat-heading">
-      <h2 id="stat-heading">${escapeHtml(messages.informationHeading)}</h2>
+    <details class="stat-card">
+      <summary class="stat-summary">${escapeHtml(messages.detailsSummary)}</summary>
       <div id="stat"></div>
-    </section>
+    </details>
 
-    <section class="data-card" aria-labelledby="data-heading">
+    <section class="data-card">
       <div class="data-toolbar">
-        <h2 id="data-heading">${escapeHtml(messages.dataHeading)}</h2>
+        <div class="action-buttons">
+          <button id="edit" class="secondary-button" type="button">${escapeHtml(messages.edit)}</button>
+          <button id="save" class="primary-button" type="button">${escapeHtml(messages.save)}</button>
+        </div>
+        <span class="toolbar-separator" aria-hidden="true"></span>
         <div class="toolbar display-toolbar">
           <span class="toolbar-label">${escapeHtml(messages.displayLabel)}</span>
           <div class="segmented-control" role="group" aria-label="${escapeHtml(messages.displayModeAria)}">
@@ -209,10 +233,6 @@ export class NodeDetailPanel {
 
       <footer class="action-bar">
         <span id="status" role="status" aria-live="polite">${escapeHtml(messages.readOnlyStatus)}</span>
-        <div class="action-buttons">
-          <button id="edit" class="secondary-button" type="button">${escapeHtml(messages.edit)}</button>
-          <button id="save" class="primary-button" type="button">${escapeHtml(messages.save)}</button>
-        </div>
       </footer>
     </section>
   </main>

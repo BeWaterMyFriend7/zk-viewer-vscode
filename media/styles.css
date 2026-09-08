@@ -81,27 +81,22 @@ body {
   margin-bottom: 16px;
 }
 
-.eyebrow {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--vscode-descriptionForeground);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 h1,
 h2 {
   margin: 0;
 }
 
 #path {
+  display: block;
+  width: 100%;
   font-family: var(--vscode-editor-font-family);
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
+  font-size: var(--vscode-font-size);
+  font-weight: 400;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
 }
 
 h2 {
@@ -119,7 +114,20 @@ h2 {
 
 .stat-card {
   margin-bottom: 16px;
-  padding: 14px 16px 16px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.stat-summary {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.stat-card[open] .stat-summary {
+  border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-input-border));
 }
 
 .data-card {
@@ -129,27 +137,34 @@ h2 {
 #stat {
   font-size: 12px;
   color: var(--vscode-descriptionForeground);
-  margin-top: 12px;
+  padding: 12px 16px 14px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 8px 20px;
 }
 
-#stat span {
+#stat > div {
+  display: grid;
+  grid-template-columns: minmax(104px, auto) 1fr;
+  gap: 10px;
   min-width: 0;
-  overflow-wrap: anywhere;
 }
 
-#stat b {
+.stat-label {
   color: var(--vscode-foreground);
   font-weight: 600;
+}
+
+.stat-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .data-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: flex-start;
+  gap: 12px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-input-border));
 }
@@ -225,8 +240,14 @@ button:focus-visible,
 }
 
 .display-toolbar {
-  justify-content: flex-end;
+  justify-content: flex-start;
   flex-wrap: wrap;
+}
+
+.toolbar-separator {
+  align-self: stretch;
+  width: 1px;
+  background: var(--vscode-widget-border, var(--vscode-input-border));
 }
 
 .toolbar-label {
@@ -372,7 +393,9 @@ button:focus-visible,
     justify-content: flex-start;
   }
 
-  .action-buttons {
-    align-self: flex-end;
+  .toolbar-separator {
+    align-self: auto;
+    width: 100%;
+    height: 1px;
   }
 }

@@ -20,7 +20,13 @@ describe('import/export messages', () => {
     assert.strictEqual(messages.search.modeLabels.contains, '路径包含（例如 168）');
     assert.strictEqual(messages.node.typeLabels.EPHEMERAL, '临时节点');
     assert.strictEqual(messages.sort.labels.ctime, '创建时间（从早到晚）');
-    assert.strictEqual(messages.detail.informationHeading, '节点信息');
+    assert.strictEqual(messages.detail.detailsSummary, '详细信息');
+    assert.strictEqual(messages.detail.statLabels.dataLength, '数据大小');
+    assert.strictEqual(messages.detail.statLabels.czxid, '创建事务 ID');
+    assert.strictEqual(messages.detail.persistentNode, '持久节点');
+    assert.strictEqual(messages.detail.leafNode(0), '0（叶子节点）');
+    assert.strictEqual(messages.detail.dataVersion(0), '0（数据未发生变更）');
+    assert.strictEqual(messages.detail.dataVersion(1), '1（数据修改过 1 次）');
     assert.strictEqual(messages.detail.wrapOn, '换行：开');
     assert.strictEqual(messages.detail.edit, '编辑');
     assert.strictEqual(
@@ -40,6 +46,12 @@ describe('import/export messages', () => {
     assert.strictEqual(getImportExportMessages('en').languageButton, 'Set Language...');
     assert.strictEqual(getImportExportMessages('en').connection.selectConnection, 'Select a connection');
     assert.strictEqual(getImportExportMessages('en').detail.save, 'Save');
+    assert.strictEqual(getImportExportMessages('en').detail.detailsSummary, 'Details');
+    assert.strictEqual(getImportExportMessages('en').detail.statLabels.mzxid, 'Modified transaction ID');
+    assert.strictEqual(getImportExportMessages('en').detail.persistentNode, 'Persistent node');
+    assert.strictEqual(getImportExportMessages('en').detail.leafNode(0), '0 (leaf node)');
+    assert.strictEqual(getImportExportMessages('en').detail.dataVersion(0), '0 (data unchanged)');
+    assert.strictEqual(getImportExportMessages('en').detail.dataVersion(1), '1 (data changed 1 time)');
     assert.strictEqual(
       getImportExportMessages('en').importValidationFailure('missing-parent', '/outside'),
       'The external parent node does not exist: /outside',

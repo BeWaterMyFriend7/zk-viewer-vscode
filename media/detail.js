@@ -4,9 +4,7 @@
   const editButton = document.getElementById('edit');
   const saveButton = document.getElementById('save');
   const statBox = document.getElementById('stat');
-  const statHeading = document.getElementById('stat-heading');
-  const dataHeading = document.getElementById('data-heading');
-  const eyebrow = document.querySelector('.eyebrow');
+  const statSummary = document.querySelector('.stat-summary');
 
   let currentPath;
   let currentVersion;
@@ -35,9 +33,9 @@
     messages = nextMessages;
     document.documentElement.lang = messages.htmlLanguage;
     document.title = messages.documentTitle;
-    eyebrow.textContent = messages.eyebrow;
-    statHeading.textContent = messages.informationHeading;
-    dataHeading.textContent = messages.dataHeading;
+    statSummary.textContent = messages.detailsSummary;
+    editButton.textContent = messages.edit;
+    saveButton.textContent = messages.save;
     editor.setMessages(messages);
   }
 
@@ -51,22 +49,45 @@
       const pad = (n) => n.toString().padStart(2, '0');
       return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds());
     };
+    const kibibytes = (Number(stat.dataLength) / 1024).toFixed(2);
+    const owner = String(stat.ephemeralOwner ?? '').trim();
+    const persistent =
+      owner === '' ||
+      owner === '0' ||
+      (/^0x/i.test(owner) ? /^0*$/.test(owner.slice(2)) : Number(owner) === 0);
+    const formatVersion = (templates, version) => {
+      const key = Number(version) === 0 ? 'zero' : Number(version) === 1 ? 'one' : 'many';
+      return formatMessage(templates[key], { version: version });
+    };
     const fields = {
-      path: currentPath,
-      version: stat.version,
-      cversion: stat.cversion,
-      aversion: stat.aversion,
-      dataLength: stat.dataLength,
-      numChildren: stat.numChildren,
-      ephemeralOwner: stat.ephemeralOwner,
-      mtime: formatTime(stat.mtime),
       ctime: formatTime(stat.ctime),
+      mtime: formatTime(stat.mtime),
+      dataLength: formatMessage(messages.dataSize, { bytes: stat.dataLength, kibibytes: kibibytes }),
+      numChildren: formatMessage(
+        Number(stat.numChildren) === 0 ? messages.leafNode : messages.childCount,
+        { count: stat.numChildren },
+      ),
+      nodeType: persistent
+        ? messages.persistentNode
+        : formatMessage(messages.ephemeralNode, { sessionId: stat.ephemeralOwner }),
+      version: formatVersion(messages.dataVersion, stat.version),
+      cversion: formatVersion(messages.childVersion, stat.cversion),
+      aversion: formatVersion(messages.aclVersion, stat.aversion),
       czxid: stat.czxid,
       mzxid: stat.mzxid,
     };
-    statBox.innerHTML = Object.entries(fields)
-      .map(([key, value]) => '<span><b>' + (messages.statLabels[key] || key) + '</b>: ' + value + '</span>')
-      .join('');
+    statBox.replaceChildren();
+    Object.entries(fields).forEach(([key, value]) => {
+      const row = document.createElement('div');
+      const label = document.createElement('span');
+      const content = document.createElement('span');
+      label.className = 'stat-label';
+      label.textContent = messages.statLabels[key] || key;
+      content.className = 'stat-value';
+      content.textContent = String(value);
+      row.append(label, content);
+      statBox.append(row);
+    });
   }
 
   function setEditing(enabled) {
