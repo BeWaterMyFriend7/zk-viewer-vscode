@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import type { DetailMessages, ImportExportMessages } from '../i18n/import-export-messages';
 import type { ZkClient } from '../zk/zk-client';
 import { DetailPanelController, type DetailPanelDeps } from './detail-controller';
+import { buildNodeDetailTitle } from './node-detail-title';
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -107,7 +108,7 @@ export class NodeDetailPanel {
   ) {
     this.panel = vscode.window.createWebviewPanel(
       'zkViewer.nodeDetail',
-      path,
+      buildNodeDetailTitle(path),
       this.newTab ? vscode.ViewColumn.Active : vscode.ViewColumn.Two,
       {
         enableScripts: true,
