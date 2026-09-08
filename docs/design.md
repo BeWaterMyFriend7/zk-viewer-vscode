@@ -99,7 +99,8 @@ test/unit|perf|integration/
 
 - `json-utils`：数据分类（JSON / 文本 / 二进制含 `\0`），JSON 二空格格式化与安全紧凑化，二进制十六进制视图；
 - `DetailPanelController`：vscode 无关的消息协议，`loadData → save → saved/error`，保存携带 `stat.version` 乐观锁，`BadVersion` 冲突不覆盖并返回错误；保存前经 `nodeExists` 预检，删除 / 冲突错误通过 `notifyError` 弹出 VS Code 通知；打开节点时注册一次性数据 watch（`watchNode`），收到删除事件即报错并回调 `onNodeDeleted` 关闭面板，其他事件后自动重新武装以持续监测；
-- `NodeDetailPanel`：Webview 面板（CSP nonce + localResourceRoots），与控制器桥接；原始数据与展示文本分离，支持 JSON / TXT 模式、换行开关与一键紧凑化，JSON 模式保存前紧凑序列化，TXT 模式原样保存；**默认只读**，必须点击「Edit」按钮才进入编辑模式（防误触），二进制数据始终只读；面板销毁时调用 `controller.dispose()` 停止响应陈旧 watch 事件。
+- `NodeDetailPanel`：Webview 面板（CSP nonce + localResourceRoots），与控制器桥接；正文路径保持完整并以单行省略样式展示，原生 `title` 提供悬停全文，文本允许选择复制；stat 区使用默认关闭的 `<details>`，隐藏重复路径并将原始字段转换为可读节点类型、大小、子节点和版本说明；数据区不显示冗余标题，左侧编辑/保存操作与右侧显示选项由分隔线分组。原始数据与展示文本分离，支持 JSON / TXT 模式、换行开关与一键紧凑化，JSON 模式保存前紧凑序列化，TXT 模式原样保存；**默认只读**，必须点击「Edit」按钮才进入编辑模式（防误触），二进制数据始终只读；面板销毁时调用 `controller.dispose()` 停止响应陈旧 watch 事件。
+- `node-detail-title`：只负责生成 VS Code 标签页紧凑标题；路径不超过两级时保持原样，深层路径固定显示为 `.../父节点/当前节点`，不执行同名标签消歧。
 - `data-editor.js`（`window.zkDataEditor.create(options)`）：**共用数据编辑器**，将数据区的 JSON 紧凑 / 格式化、JSON / TXT 切换、换行开关、一键压缩与草稿捕获抽为无 VS Code 依赖的前端模块；详情面板与新增节点表单通过既定 DOM id（`data`、`display-json`、`display-text`、`toggle-wrap`、`compact-json`、`status`）复用同一套展示与编辑逻辑。
 
 ### 3.5 节点操作（commands/）
