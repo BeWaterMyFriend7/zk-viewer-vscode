@@ -1,13 +1,13 @@
 # ZooKeeper Viewer
 <p align="center">
-  <img src="media/icon-source.svg" width="200">
+  <img src="media/icon.png" width="200">
 </p>
 
 [中文 README ](README.md) | [English README](docs/README.en.md)
 
 在 VS Code 内直接浏览和管理 Apache ZooKeeper数据，可进行多连接管理、节点搜索、JSON/TXT 查看与编辑节点数据、节点增删，以及数据导入导出等。
 
-![ZooKeeper Viewer feature demo](media/demo.gif)
+![ZooKeeper Viewer feature demo](https://raw.githubusercontent.com/BeWaterMyFriend7/zk-viewer-vscode/main/media/demo.gif)
 
 
 

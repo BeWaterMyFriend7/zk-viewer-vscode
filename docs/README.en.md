@@ -1,14 +1,14 @@
 # ZooKeeper Viewer
 
 <p align="center">
-  <img src="../media/icon-source.svg" width="200">
+  <img src="../media/icon.png" width="200">
 </p>
 
 [中文 README](../README.md) | [English README](README.en.md)
 
 Browse and manage Apache ZooKeeper data directly in VS Code. Manage multiple connections, search nodes, view and edit node data in JSON or TXT format, create or delete nodes, and import or export data.
 
-![ZooKeeper Viewer feature demo](../media/demo.gif)
+![ZooKeeper Viewer feature demo](https://raw.githubusercontent.com/BeWaterMyFriend7/zk-viewer-vscode/main/media/demo.gif)
 
 ## Why ZooKeeper Viewer
 

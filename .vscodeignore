@@ -19,5 +19,7 @@ AGENTS.md
 eslint.config.mjs
 tsconfig.json
 media/icon-source.svg
+media/demo.gif
+media/demo.mp4
 docs/REQUIREMENTS.md
 docs/design.md
