@@ -8,7 +8,7 @@ on:
         required: true
         default: '0.2.0'
   push:
-    tags: ['v*']
+    tags: ['*.*.*']
 
 permissions:
   contents: write
@@ -48,22 +48,57 @@ jobs:
           name: zk-viewer-vscode-vsix
           path: dist/zk-viewer-vscode.vsix
           if-no-files-found: error
+      - name: Prepare release notes
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            VERSION="$GITHUB_REF_NAME"
+          else
+            VERSION="${INPUT_VERSION#v}"
+          fi
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::发布版本必须使用 x.y.z 格式且不带 v 前缀，当前值：$VERSION"
+            exit 1
+          fi
+
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$PACKAGE_VERSION" != "$VERSION" ]]; then
+            echo "::error::发布版本 $VERSION 与 package.json 版本 $PACKAGE_VERSION 不一致"
+            exit 1
+          fi
+
+          if ! grep -Fxq "## $VERSION" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md 中缺少版本章节：## $VERSION"
+            exit 1
+          fi
+
+          awk -v heading="## $VERSION" '
+            $0 == heading { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > dist/release-notes.md
+
+          if [[ ! -s dist/release-notes.md ]]; then
+            echo "::error::CHANGELOG.md 的 $VERSION 版本说明为空"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_ENV"
+          echo "tag=$VERSION" >> "$GITHUB_ENV"
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # tag 推送：版本取自 tag（v0.2.0 → 0.2.0）
-          # 手动触发：版本取输入框，缺少对应 tag 时 gh 会自动创建
-          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-            TAG="$GITHUB_REF_NAME"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" \
+              --title "zk-viewer-vscode $version" \
+              --notes-file dist/release-notes.md
+            gh release upload "$tag" dist/zk-viewer-vscode.vsix --clobber
           else
-            VERSION="${{ github.event.inputs.version }}"
-            VERSION="${VERSION#v}"
-            TAG="v${VERSION}"
+            gh release create "$tag" dist/zk-viewer-vscode.vsix \
+              --target "$GITHUB_SHA" \
+              --title "zk-viewer-vscode $version" \
+              --notes-file dist/release-notes.md
           fi
-          gh release create "$TAG" dist/zk-viewer-vscode.vsix \
-            --title "zk-viewer-vscode $VERSION" \
-            --notes "自动构建的 VSIX 安装包（版本 $VERSION）。" \
-            --generate-notes \
-          || gh release upload "$TAG" dist/zk-viewer-vscode.vsix --clobber
