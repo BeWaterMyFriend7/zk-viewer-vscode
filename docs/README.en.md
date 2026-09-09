@@ -2,23 +2,21 @@
 
 # ZooKeeper Viewer
 
-Browse and manage Apache ZooKeeper directly in VS Code. No separate web console is required: manage multiple connections, search nodes, view and edit JSON/TXT data, create or delete nodes, and import or export complete subtrees.
+Browse and manage Apache ZooKeeper data directly in VS Code. Manage multiple connections, search nodes, view and edit node data in JSON or TXT format, create or delete nodes, and import or export data.
 
 ![ZooKeeper Viewer feature demo](../media/demo.gif)
 
-The demo covers the ZooKeeper view toolbar, node context-menu actions, node details, and the complete search flow. The **More Actions** menu includes connection editing and removal, sorting, node-data import, and import-format help.
-
 ## Why ZooKeeper Viewer
 
-- **Stay in VS Code**: browse and operate ZooKeeper without switching tools.
-- **Secure connections**: supports multiple hosts, chroot, digest authentication, and TLS; passwords are stored in VS Code SecretStorage.
+- **Lightweight and agile**: built on VS Code, with no additional dependencies required.
 - **Efficient browsing**: lazily loads only expanded levels and sorts by name, creation time, or modification time.
+- **Secure connections**: supports multiple hosts, chroot, digest authentication, and TLS; passwords are stored in VS Code SecretStorage.
 - **Flexible search**: supports exact paths, name prefixes, path wildcards, regular expressions, and node-content search.
-- **Safe editing**: details are read-only by default, and saves use ZooKeeper version checks to prevent overwriting concurrent changes.
+- **Friendly visualization**: view node data as JSON or TXT, toggle line wrapping as needed, remove unnecessary line breaks with one action, and edit data conveniently.
 - **Lossless migration**: export one node or a complete subtree to JSON and restore it later.
 - **Chinese and English UI**: follow the VS Code display language or choose a language explicitly.
 
-## Requirements
+## Environment
 
 - VS Code `1.60.0` or later
 - Apache ZooKeeper `3.4` or later
@@ -26,13 +24,29 @@ The demo covers the ZooKeeper view toolbar, node context-menu actions, node deta
 
 ## Installation
 
-Search for **ZooKeeper Viewer** in the VS Code Extensions view and select **Install**, or open its [Visual Studio Marketplace page](https://marketplace.visualstudio.com/items?itemName=BeWater.zk-viewer-vscode).
+- **Install from VS Code**:
+  Search for **ZooKeeper Viewer** in the VS Code Extensions view and select **Install**.
 
-To install a downloaded VSIX:
+- **Install from the online marketplace**:
+  Open the [Visual Studio Marketplace page](https://marketplace.visualstudio.com/items?itemName=BeWater.zk-viewer-vscode).
 
-```bash
-code --install-extension zk-viewer-vscode.vsix
-```
+- **Download a release package from GitHub for offline installation**:
+  - Download the latest package from [GitHub Releases](https://github.com/BeWaterMyFriend7/zk-viewer-vscode/releases).
+  - In the VS Code Extensions view, select **Install from VSIX...**, or run:
+
+    ```bash
+    code --install-extension zk-viewer-vscode.vsix
+    ```
+
+- **Build and install from source**:
+  - Download or clone the [source repository](https://github.com/BeWaterMyFriend7/zk-viewer-vscode.git).
+  - In the project root, run:
+
+    ```bash
+    npm run package          # Generates dist/zk-viewer-vscode.vsix
+    ```
+
+  - Install the generated VSIX in VS Code.
 
 ## Quick start
 

@@ -2,23 +2,22 @@
 
 # ZooKeeper Viewer
 
-在 VS Code 内直接浏览和管理 Apache ZooKeeper。无需额外部署 Web 控制台，即可完成多连接管理、节点搜索、JSON/TXT 查看与编辑、节点增删，以及子树导入导出。
+在 VS Code 内直接浏览和管理 Apache ZooKeeper数据，可进行多连接管理、节点搜索、JSON/TXT 查看与编辑节点数据、节点增删，以及数据导入导出等。
 
 ![ZooKeeper Viewer feature demo](media/demo.gif)
 
-演示展示了完整的 ZooKeeper 视图工具栏（新增连接、搜索、刷新、连接/断开、语言和“更多操作”菜单）、所有节点右键操作、节点详情，以及从选择搜索模式到定位结果的完整流程。“更多操作”菜单包含连接编辑/删除、排序、节点数据导入和导入格式帮助；节点右键菜单包含详情、新增、编辑、删除、复制路径、节点/子树导出、刷新和子树搜索。
 
 ## 为什么使用
 
-- **轻量直达**：从 VS Code 活动栏进入，不切换开发环境
-- **安全连接**：支持多地址、Chroot、digest 认证和 TLS；密码保存在 VS Code SecretStorage 中
+- **轻量敏捷**：依托vscode，插件足够轻量，无需其他依赖。
 - **高效浏览**：节点按需懒加载，可按名称、创建时间或更新时间排序
+- **安全连接**：支持多地址、Chroot、digest 认证和 TLS；密码保存在 VS Code SecretStorage 中
 - **完整搜索**：支持精确路径、名称前缀、路径通配符、正则和节点内容搜索
-- **谨慎编辑**：详情默认只读，保存使用 ZooKeeper 版本号校验，冲突时不会覆盖远端数据
+- **可视化友好**：支持json、txt查看节点数据，是否换行按需开关，一键去除多余换行，编辑友好。
 - **便捷迁移**：单节点或完整子树可无损导出为 JSON，并可恢复到 ZooKeeper
 - **中英文界面**：可跟随 VS Code，也可手动切换中文或 English
 
-## 要求
+## 使用环境说明
 
 - VS Code `1.60.0` 或更高版本
 - Apache ZooKeeper `3.4` 或更高版本
@@ -26,13 +25,29 @@
 
 ## 安装
 
-在 VS Code 扩展视图中搜索 **ZooKeeper Viewer**，点击 **安装**；也可以打开 [Visual Studio Marketplace 页面](https://marketplace.visualstudio.com/items?itemName=BeWater.zk-viewer-vscode)。
+- VS Code 软件内安装：
+  在 VS Code 扩展视图中搜索 **ZooKeeper Viewer**，点击 **安装**；
 
-也可以下载 VSIX 后执行：
+- 在线插件市场安装：
+  打开 [Visual Studio Marketplace 页面](https://marketplace.visualstudio.com/items?itemName=BeWater.zk-viewer-vscode)。
 
-```bash
-code --install-extension zk-viewer-vscode.vsix
-```
+- Github 离线下载relase包安装：
+  - 在 [Github Relase](https://github.com/BeWaterMyFriend7/zk-viewer-vscode/releases) 下载最新包
+  - 下载完成后在VS Code 插件视图中选择从 **从VISX安装**离线安装。或者运行命令安装：
+
+    ```bash
+    code --install-extension zk-viewer-vscode.vsix
+    ```
+
+- 源码打包安装：
+  - 下载源码 [https://github.com/BeWaterMyFriend7/zk-viewer-vscode.git](https://github.com/BeWaterMyFriend7/zk-viewer-vscode.git)
+  - 进入项目根目录，执行打包命令
+
+    ```bash
+    npm run package          # 打包 dist/zk-viewer-vscode.vsix
+    ```
+
+  - VS Code 离线安装插件
 
 ## 快速上手
 
