@@ -1,8 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3.6 5.1H13.1L3.9 19.1H12"/>
-    <path d="M15.9 2.9L11.3 21.2"/>
-    <path d="M13.4 11.3L20 5"/>
-    <path d="M13.4 11.3L19.7 18.8"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="ZK lightning logo">
+  <path
+    d="M42.42 69.53 L20.00 99.52 L80.29 99.83 L20.30 178.89 L97.55 178.89 L98.77 196.16 L117.55 143.45 L77.86 142.84 L132.70 69.53 Z
+       M149.66 59.53 L116.64 121.94 L152.99 122.55 L102.70 196.47 L149.66 154.36 L183.29 189.50 L231.76 189.50 L176.32 130.73 L236.00 69.53 L192.07 69.53 L149.96 111.64 Z"
+    fill="currentColor"
+  />
 </svg>
