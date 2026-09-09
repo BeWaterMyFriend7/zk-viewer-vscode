@@ -84,6 +84,20 @@ suite('Node actions (mock)', () => {
     assert.ok(html.includes('id="data"'), 'create form should include a data editor');
     assert.ok(html.includes('class="static-value"'), 'create form should show parent path as static text');
     assert.ok(html.includes('/app'), 'create form should show the parent path value');
+    assert.ok(!html.includes('id="data-heading"'), 'the redundant node data heading should be removed');
+    const cancelIndex = html.indexOf('id="cancel-create"');
+    const createIndex = html.indexOf('id="save-create"');
+    const displayIndex = html.indexOf('class="toolbar display-toolbar"');
+    assert.ok(cancelIndex >= 0, 'create form should include a Cancel button');
+    assert.ok(createIndex >= 0, 'create form should include a Create button');
+    assert.ok(
+      cancelIndex < displayIndex && createIndex < displayIndex,
+      'create actions should stay to the left of display controls',
+    );
+    assert.ok(
+      html.includes('class="toolbar-separator"'),
+      'create actions should be separated from right-aligned display controls',
+    );
 
     await vscode.commands.executeCommand('zkViewer.disconnect');
   });

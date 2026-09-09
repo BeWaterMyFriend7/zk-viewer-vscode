@@ -181,9 +181,13 @@ export class NodeCreatePanel {
         <span>${escapeHtml(messages.typePrompt)}</span>
         <select id="n-mode">${modeOptionsHtml}</select>
       </label>
-      <section class="data-card" aria-labelledby="data-heading">
+      <section class="data-card">
         <div class="data-toolbar">
-          <h2 id="data-heading">${escapeHtml(detail.dataHeading)}</h2>
+          <div class="action-buttons">
+            <button id="cancel-create" class="secondary-button" type="button">${escapeHtml(messages.cancelNodeButton)}</button>
+            <button id="save-create" class="primary-button" type="submit">${escapeHtml(messages.createNodeButton)}</button>
+          </div>
+          <span class="toolbar-separator" aria-hidden="true"></span>
           <div class="toolbar display-toolbar">
             <span class="toolbar-label">${escapeHtml(detail.displayLabel)}</span>
             <div class="segmented-control" role="group" aria-label="${escapeHtml(detail.displayModeAria)}">
@@ -197,10 +201,6 @@ export class NodeCreatePanel {
         <textarea id="data" spellcheck="false" placeholder="${escapeHtml(detail.dataPlaceholder)}"></textarea>
         <footer class="action-bar">
           <span id="status" role="status" aria-live="polite"></span>
-          <div class="action-buttons">
-            <button id="cancel-create" class="secondary-button" type="button">${escapeHtml(messages.cancelNodeButton)}</button>
-            <button id="save-create" class="primary-button" type="submit">${escapeHtml(messages.createNodeButton)}</button>
-          </div>
         </footer>
       </section>
       <div id="node-create-error" class="form-error" role="alert"></div>
