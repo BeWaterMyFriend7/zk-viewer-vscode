@@ -1,6 +1,10 @@
-[中文](../README.md) | [English](README.en.md)
-
 # ZooKeeper Viewer
+
+<p align="center">
+  <img src="../media/icon-source.svg" width="200">
+</p>
+
+[中文 README](../README.md) | [English README](README.en.md)
 
 Browse and manage Apache ZooKeeper data directly in VS Code. Manage multiple connections, search nodes, view and edit node data in JSON or TXT format, create or delete nodes, and import or export data.
 
@@ -77,7 +81,7 @@ Connection settings are stored in the VS Code workspace state. Passwords are enc
 
 After a network interruption, the underlying client first attempts to recover the existing session within a bounded observation window. A new session is created only after session expiration, authentication failure, or observation timeout. Configure the window with `zkViewer.maxReconnectAttempts` and `zkViewer.reconnectDelayMs`.
 
-### Browsing and sorting
+### Node browsing and management
 
 - Expanding a node loads only its direct children.
 - Persistent nodes use folder or file icons depending on whether they have children. Sequential and ephemeral node types keep distinct icons.
@@ -100,9 +104,9 @@ Results are sorted by path. Selecting a result expands the tree and reveals the 
 
 `zkViewer.maxSearchNodes` defaults to 500000 visited nodes; set it to `0` for no limit. `zkViewer.maxNodeDataBytes` limits the amount of data read from each node during content search and defaults to `0` (unlimited).
 
-### Viewing and editing data
+### Viewing and editing node data
 
-1. Double-click a node or select **Open Details**.
+1. Select a node, then choose **Open Details** or **Open Details in New Tab**.
 2. Deep paths use a compact VS Code tab title such as `.../parent/current`. The panel retains the complete path, truncates it to one line when necessary, and exposes the full value on hover and for text selection.
 3. Node metadata is collapsed by default. Expand **Details** to see readable node type, timestamps, data size, direct-child count, data/children/ACL versions, and creation/modification transaction IDs.
 4. Valid JSON is displayed with two-space indentation. Switch to TXT for the original text and use the wrap control as needed.

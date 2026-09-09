@@ -24,8 +24,7 @@
     "database",
     "viewer",
     "explorer",
-    "json",
-    "distributed systems"
+    "json"
   ],
   "galleryBanner": {
     "color": "#0F4C81",

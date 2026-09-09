@@ -1,10 +1,14 @@
-[中文](README.md) | [English](docs/README.en.md)
-
 # ZooKeeper Viewer
+<p align="center">
+  <img src="media/icon-source.svg" width="200">
+</p>
+
+[中文 README ](README.md) | [English README](docs/README.en.md)
 
 在 VS Code 内直接浏览和管理 Apache ZooKeeper数据，可进行多连接管理、节点搜索、JSON/TXT 查看与编辑节点数据、节点增删，以及数据导入导出等。
 
 ![ZooKeeper Viewer feature demo](media/demo.gif)
+
 
 
 ## 为什么使用
@@ -78,7 +82,7 @@
 
 网络断开时扩展会交给底层库在**观察窗口**内复用当前会话自动恢复（临时节点不丢失）；只有会话真正过期、认证失败或窗口超时才重建会话并停止后台重连，等待手动重新连接。可通过 `zkViewer.maxReconnectAttempts` 与 `zkViewer.reconnectDelayMs` 调整窗口时长（约为二者乘积）。
 
-### 浏览与排序
+### 节点浏览与管理
 
 - 展开节点时仅加载当前层级，不会一次读取整棵树。
 - 节点图标：普通持久节点按是否有子节点区分为文件夹 / 文件图标；持久顺序、临时、临时顺序节点保留各自的专属图标。图标按类型着色以便一眼区分。
@@ -101,9 +105,9 @@
 
 默认最多遍历 500000 个节点；达到 `zkViewer.maxSearchNodes` 上限时，界面会提示结果可能不完整。将该设置设为 `0` 可取消数量限制。`zkViewer.maxNodeDataBytes` 用于限制内容搜索读取的数据大小，默认 `0` 表示不限制。
 
-### 查看与编辑数据
+### 查看与编辑节点数据
 
-1. 双击节点，或右键选择 `Open Details`。
+1. 选中节点，点击 `查看详情`或者`在新标签页查看详情`。
 2. VS Code 标签页使用紧凑标题：深层路径仅显示 `.../父节点/当前节点`；面板内仍显示完整路径，超长时单行省略，悬停可查看全文并可选择复制。
 3. 节点详细信息默认折叠。展开后以可读名称显示节点类型、创建/修改时间、数据大小、直接子节点、数据/子节点/ACL 版本及创建/修改事务 ID。
 4. JSON 数据默认按 2 空格缩进展示；可切换到 TXT 查看原始文本，并可控制换行。
