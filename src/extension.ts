@@ -1021,6 +1021,7 @@ export function getTestApi(): {
   detailPanelHtml: () => string | undefined;
   connectionFormHtml: () => string | undefined;
   nodeCreateHtml: () => string | undefined;
+  importTemplateHtml: () => string | undefined;
   statusBarText: () => string;
   lastRevealedPath: () => string | undefined;
   lastCommandError: () => string | undefined;
@@ -1037,6 +1038,7 @@ export function getTestApi(): {
     detailPanelHtml: () => NodeDetailPanel.getCurrentHtml(),
     connectionFormHtml: () => ConnectionFormPanel.getCurrentHtml(),
     nodeCreateHtml: () => NodeCreatePanel.getCurrentHtml(),
+    importTemplateHtml: () => ImportTemplatePanel.getCurrentHtml(),
     statusBarText: () => statusBar.text,
     lastRevealedPath: () => lastRevealedPath,
     lastCommandError: () => lastCommandError,

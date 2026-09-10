@@ -34,7 +34,7 @@
     "type": "git",
     "url": "https://github.com/BeWaterMyFriend7/zk-viewer-vscode.git"
   },
-  "main": "./out/src/extension.js",
+  "main": "./out/extension.js",
   "activationEvents": [
     "onView:zkViewer.tree",
     "onCommand:zkViewer.connect",
@@ -1038,6 +1038,8 @@
   },
   "scripts": {
     "compile": "tsc -p ./",
+    "bundle": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node14 --external:vscode --legal-comments=none --outfile=out/extension.js",
+    "build": "npm run compile && npm run bundle",
     "watch": "tsc -watch -p ./",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -1045,8 +1047,8 @@
     "test:unit": "npm run compile && mocha \"out/test/unit/**/*.test.js\"",
     "test:unit:cov": "npm run compile && c8 mocha \"out/test/unit/**/*.test.js\"",
     "test:perf": "npm run compile && mocha \"out/test/perf/**/*.test.js\" --timeout 30000",
-    "test:integration": "npm run compile && node scripts/run-integration-tests.js",
-    "vscode:prepublish": "npm run compile",
+    "test:integration": "npm run build && node scripts/run-integration-tests.js",
+    "vscode:prepublish": "npm run build",
     "prepackage": "node -e \"require('fs').mkdirSync('dist',{recursive:true})\"",
     "package": "vsce package --out dist/zk-viewer-vscode.vsix"
   },
@@ -1061,6 +1063,7 @@
     "@vscode/test-electron": "^2.4.1",
     "@vscode/vsce": "^3.2.1",
     "c8": "^10.0.0",
+    "esbuild": "^0.25.12",
     "eslint": "^9.0.0",
     "mocha": "^10.8.0",
     "prettier": "^3.0.0",
