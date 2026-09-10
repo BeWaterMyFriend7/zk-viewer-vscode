@@ -32,6 +32,31 @@ function sanitizeConnectionConfig(config: ConnectionConfig): ConnectionConfig {
   };
 }
 
+function migrationIdentity(config: ConnectionConfig): string {
+  const hosts = config.hosts
+    .split(',')
+    .map((host) => host.trim().toLowerCase())
+    .join(',');
+  return JSON.stringify([hosts, config.username?.trim() ?? '']);
+}
+
+function findMissingLegacyConfigs(
+  globalConfigs: ConnectionConfig[],
+  legacyConfigs: ConnectionConfig[],
+): ConnectionConfig[] {
+  const knownIds = new Set(globalConfigs.map((config) => config.id));
+  const knownIdentities = new Set(globalConfigs.map(migrationIdentity));
+  return legacyConfigs.filter((config) => {
+    const identity = migrationIdentity(config);
+    if (knownIds.has(config.id) || knownIdentities.has(identity)) {
+      return false;
+    }
+    knownIds.add(config.id);
+    knownIdentities.add(identity);
+    return true;
+  });
+}
+
 export class ConnectionStore {
   constructor(
     private readonly storage: KeyValueStorage,
@@ -94,18 +119,15 @@ export async function initializeConnectionStore(
     );
     for (let attempt = 0; attempt < MAX_MIGRATION_MERGE_ATTEMPTS; attempt += 1) {
       const globalConfigs = globalState.get<ConnectionConfig[]>(CONNECTIONS_KEY) ?? [];
-      const globalIds = new Set(globalConfigs.map((config) => config.id));
-      const missing = legacyConfigs.filter((config) => !globalIds.has(config.id));
+      const missing = findMissingLegacyConfigs(globalConfigs, legacyConfigs);
       if (missing.length === 0) {
         break;
       }
       await globalState.update(CONNECTIONS_KEY, [...globalConfigs, ...missing]);
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
-    const migratedIds = new Set(
-      (globalState.get<ConnectionConfig[]>(CONNECTIONS_KEY) ?? []).map((config) => config.id),
-    );
-    if (legacyConfigs.some((config) => !migratedIds.has(config.id))) {
+    const finalGlobalConfigs = globalState.get<ConnectionConfig[]>(CONNECTIONS_KEY) ?? [];
+    if (findMissingLegacyConfigs(finalGlobalConfigs, legacyConfigs).length > 0) {
       throw new Error('Unable to migrate all saved ZooKeeper connections');
     }
     await workspaceState.update(WORKSPACE_MIGRATION_KEY, true);

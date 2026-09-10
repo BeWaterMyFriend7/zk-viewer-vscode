@@ -115,6 +115,13 @@ describe('ConnectionStore', () => {
     await store.remove('c1');
     assert.strictEqual(await store.getPassword('c1'), undefined);
   });
+
+  it('allows users to save duplicate endpoints with different ids', async () => {
+    await store.save({ id: 'c1', name: 'First', hosts: 'h:2181' });
+    await store.save({ id: 'c2', name: 'Second', hosts: 'h:2181', username: '' });
+
+    assert.strictEqual((await store.list()).length, 2);
+  });
 });
 
 describe('initializeConnectionStore', () => {
@@ -161,6 +168,45 @@ describe('initializeConnectionStore', () => {
     const store = await initializeConnectionStore(global, workspaceB, secrets);
 
     assert.deepStrictEqual(await store.list(), [globalConfig, legacyA, legacyB]);
+  });
+
+  it('discards migrated duplicates by hosts and username without overwriting global entries', async () => {
+    const global = new FakeKeyValue();
+    const workspace = new FakeKeyValue();
+    const secrets = new FakeSecrets();
+    const existing = {
+      id: 'global',
+      name: 'Keep Global',
+      hosts: 'ZK.Example:2181',
+      chroot: '/global',
+    };
+    const differentAccount = {
+      id: 'legacy-account',
+      name: 'Different Account',
+      hosts: 'zk.example:2181',
+      username: 'alice',
+    };
+    const differentPort = {
+      id: 'legacy-port',
+      name: 'Different Port',
+      hosts: 'zk.example:2182',
+    };
+    await global.update('zkViewer.connections', [existing]);
+    await workspace.update('zkViewer.connections', [
+      {
+        id: 'legacy-duplicate',
+        name: 'Discard Legacy',
+        hosts: ' zk.example:2181 ',
+        username: '   ',
+        chroot: '/legacy',
+      },
+      differentAccount,
+      differentPort,
+    ]);
+
+    const store = await initializeConnectionStore(global, workspace, secrets);
+
+    assert.deepStrictEqual(await store.list(), [existing, differentAccount, differentPort]);
   });
 
   it('converges when multiple legacy workspaces migrate concurrently', async () => {
