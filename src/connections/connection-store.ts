@@ -16,12 +16,27 @@ export interface KeyValueStorage {
 }
 
 const PASSWORD_KEY_PREFIX = 'connection.';
+const CONNECTIONS_KEY = 'zkViewer.connections';
+const WORKSPACE_MIGRATION_KEY = 'zkViewer.connectionsMigratedToGlobal.v1';
+const MAX_MIGRATION_MERGE_ATTEMPTS = 3;
+
+function sanitizeConnectionConfig(config: ConnectionConfig): ConnectionConfig {
+  return {
+    id: config.id,
+    name: config.name,
+    hosts: config.hosts,
+    ...(config.chroot !== undefined ? { chroot: config.chroot } : {}),
+    ...(config.sessionTimeoutMs !== undefined ? { sessionTimeoutMs: config.sessionTimeoutMs } : {}),
+    ...(config.username !== undefined ? { username: config.username } : {}),
+    ...(config.secure !== undefined ? { secure: config.secure } : {}),
+  };
+}
 
 export class ConnectionStore {
   constructor(
-    private readonly workspace: KeyValueStorage,
+    private readonly storage: KeyValueStorage,
     private readonly secrets: SecretStorageLike,
-    private readonly configKey = 'zkViewer.connections',
+    private readonly configKey = CONNECTIONS_KEY,
   ) {}
 
   async list(): Promise<ConnectionConfig[]> {
@@ -40,7 +55,7 @@ export class ConnectionStore {
     } else {
       configs.push(config);
     }
-    await this.workspace.update(this.configKey, configs);
+    await this.storage.update(this.configKey, configs);
     if (password !== undefined) {
       await this.secrets.store(PASSWORD_KEY_PREFIX + config.id, password);
     }
@@ -48,7 +63,7 @@ export class ConnectionStore {
 
   async remove(id: string): Promise<void> {
     const configs = await this.readConfigs();
-    await this.workspace.update(
+    await this.storage.update(
       this.configKey,
       configs.filter((config) => config.id !== id),
     );
@@ -60,12 +75,42 @@ export class ConnectionStore {
   }
 
   async clear(): Promise<void> {
-    await this.workspace.update(this.configKey, []);
+    await this.storage.update(this.configKey, []);
   }
 
   private async readConfigs(): Promise<ConnectionConfig[]> {
-    return this.workspace.get<ConnectionConfig[]>(this.configKey) ?? [];
+    return this.storage.get<ConnectionConfig[]>(this.configKey) ?? [];
   }
+}
+
+export async function initializeConnectionStore(
+  globalState: KeyValueStorage,
+  workspaceState: KeyValueStorage,
+  secrets: SecretStorageLike,
+): Promise<ConnectionStore> {
+  if (!workspaceState.get<boolean>(WORKSPACE_MIGRATION_KEY)) {
+    const legacyConfigs = (workspaceState.get<ConnectionConfig[]>(CONNECTIONS_KEY) ?? []).map(
+      sanitizeConnectionConfig,
+    );
+    for (let attempt = 0; attempt < MAX_MIGRATION_MERGE_ATTEMPTS; attempt += 1) {
+      const globalConfigs = globalState.get<ConnectionConfig[]>(CONNECTIONS_KEY) ?? [];
+      const globalIds = new Set(globalConfigs.map((config) => config.id));
+      const missing = legacyConfigs.filter((config) => !globalIds.has(config.id));
+      if (missing.length === 0) {
+        break;
+      }
+      await globalState.update(CONNECTIONS_KEY, [...globalConfigs, ...missing]);
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+    const migratedIds = new Set(
+      (globalState.get<ConnectionConfig[]>(CONNECTIONS_KEY) ?? []).map((config) => config.id),
+    );
+    if (legacyConfigs.some((config) => !migratedIds.has(config.id))) {
+      throw new Error('Unable to migrate all saved ZooKeeper connections');
+    }
+    await workspaceState.update(WORKSPACE_MIGRATION_KEY, true);
+  }
+  return new ConnectionStore(globalState, secrets);
 }
 
 /**

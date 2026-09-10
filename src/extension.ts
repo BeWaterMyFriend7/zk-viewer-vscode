@@ -7,6 +7,7 @@ import {
 import {
   buildZkConnectionString,
   ConnectionStore,
+  initializeConnectionStore,
   type ConnectionConfig,
   type KeyValueStorage,
 } from './connections/connection-store';
@@ -929,7 +930,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   log('zk-viewer-vscode activating');
   extensionContext = context;
 
-  store = new ConnectionStore(
+  store = await initializeConnectionStore(
+    context.globalState as unknown as KeyValueStorage,
     context.workspaceState as unknown as KeyValueStorage,
     new SecretStorageWrapper(context.secrets as unknown as SecretStorageLike),
   );

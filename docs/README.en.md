@@ -77,7 +77,7 @@ The connection form includes the name, hosts, chroot, digest credentials, TLS, a
 | TLS | Connect through `ssl://` | On / Off |
 | Session timeout | Connection and heartbeat timeout | Default: `3000` ms |
 
-Connection settings are stored in the VS Code workspace state. Passwords are encrypted separately through VS Code SecretStorage and are not written to ordinary settings or logs.
+Connection settings are stored in VS Code extension global state, so windows and workspaces in the same profile and extension host share one connection list. Connections saved in workspace state by an older version are migrated when that workspace is first opened. Different profiles and local or remote extension hosts may still use separate state. Passwords are encrypted separately through VS Code SecretStorage and are not written to ordinary settings or logs.
 
 After a network interruption, the underlying client first attempts to recover the existing session within a bounded observation window. A new session is created only after session expiration, authentication failure, or observation timeout. Configure the window with `zkViewer.maxReconnectAttempts` and `zkViewer.reconnectDelayMs`.
 

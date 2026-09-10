@@ -27,7 +27,7 @@ suite('Connection management (mock)', () => {
     assert.strictEqual(mock?.closeCalls, 1, 'disconnect should close the client');
   });
 
-  test('connection config CRUD persists in the workspace', async () => {
+  test('connection config CRUD persists in extension global state', async () => {
     await api.store.clear();
 
     // Saving must not throw even without a keyring (graceful degradation).

@@ -72,7 +72,7 @@ test/unit|perf|integration/
 
 ### 3.1 连接管理（connections/）
 
-- `ConnectionStore`：连接配置持久化到 `workspaceState`，密码单独存 `SecretStorage`，配置中永不出现明文；
+- `ConnectionStore`：连接配置持久化到 `globalState`，同一 Profile、同一扩展运行环境下跨窗口与工作区共享；初始化时将当前工作区旧 `workspaceState` 中的配置按 ID 合并迁移（全局配置优先），并以工作区级版本标记保证迁移只成功执行一次。密码单独存 `SecretStorage`，配置中永不出现明文；
 - `SecretStorageWrapper`：带命名空间前缀的密钥封装，便于单元测试注入 Fake；
 - `ConnectionManager`：连接状态机 `closed → connecting → connected → disconnected → session-expired → closed`。网络抖动后被判定为「瞬时断连」，由底层库在**观察窗口**（时长 ≈ `maxReconnectAttempts × reconnectDelayMs`）内复用当前会话自动恢复，恢复后状态回到 connected，临时节点不丢失；只有会话真正过期（`session-expired`）、认证失败或窗口超时才关闭底层连接并停止后台重连，等待手动重新连接。手动 `disconnect()` 随时可取消观察窗口。
 - `buildZkConnectionString`：拼接 `hosts[+chroot]`，TLS 时前缀 `ssl://`；连接表单的 **Test Connection** 通过注入的 `testConnection(config, password)` 依赖发起一次真实连接（成功后即关闭），用于保存前校验连通性。
