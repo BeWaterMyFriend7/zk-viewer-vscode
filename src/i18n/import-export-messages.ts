@@ -41,6 +41,8 @@ export interface ConnectionMessages {
   testConnectionButton: string;
   testSuccess: string;
   testFailed(detail: string): string;
+  migrationInProgress: string;
+  migrationCompleted: string;
 }
 
 export interface SearchMessages {
@@ -221,6 +223,8 @@ const english: ImportExportMessages = {
     testConnectionButton: 'Test Connection',
     testSuccess: 'Connection OK',
     testFailed: (detail) => `Connection failed: ${detail}`,
+    migrationInProgress: 'Migrating connection settings from the previous version...',
+    migrationCompleted: 'Connection settings migration completed.',
   },
   search: {
     modeLabels: {
@@ -462,6 +466,8 @@ const chinese: ImportExportMessages = {
     testConnectionButton: '测试连接',
     testSuccess: '连接成功',
     testFailed: (detail) => `连接失败：${detail}`,
+    migrationInProgress: '正在迁移旧版连接配置…',
+    migrationCompleted: '连接配置迁移完成。',
   },
   search: {
     modeLabels: {

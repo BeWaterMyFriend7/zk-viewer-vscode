@@ -2,7 +2,7 @@
   "name": "zk-viewer-vscode",
   "displayName": "ZooKeeper Viewer",
   "description": "Lightweight visual ZooKeeper client for VS Code: browse, search, sort, edit, add, delete, import and export nodes with JSON support.",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "BeWater",
   "license": "Apache-2.0",
   "icon": "media/icon.png",

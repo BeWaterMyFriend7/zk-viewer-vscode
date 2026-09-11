@@ -15,6 +15,8 @@ export interface KeyValueStorage {
   update(key: string, value: unknown): Thenable<void>;
 }
 
+export type ConnectionMigrationRunner = (task: () => Promise<void>) => Promise<void>;
+
 const PASSWORD_KEY_PREFIX = 'connection.';
 const CONNECTIONS_KEY = 'zkViewer.connections';
 const WORKSPACE_MIGRATION_KEY = 'zkViewer.connectionsMigratedToGlobal.v1';
@@ -112,25 +114,33 @@ export async function initializeConnectionStore(
   globalState: KeyValueStorage,
   workspaceState: KeyValueStorage,
   secrets: SecretStorageLike,
+  runMigration: ConnectionMigrationRunner = async (task) => task(),
 ): Promise<ConnectionStore> {
   if (!workspaceState.get<boolean>(WORKSPACE_MIGRATION_KEY)) {
     const legacyConfigs = (workspaceState.get<ConnectionConfig[]>(CONNECTIONS_KEY) ?? []).map(
       sanitizeConnectionConfig,
     );
-    for (let attempt = 0; attempt < MAX_MIGRATION_MERGE_ATTEMPTS; attempt += 1) {
-      const globalConfigs = globalState.get<ConnectionConfig[]>(CONNECTIONS_KEY) ?? [];
-      const missing = findMissingLegacyConfigs(globalConfigs, legacyConfigs);
-      if (missing.length === 0) {
-        break;
+    const migrate = async (): Promise<void> => {
+      for (let attempt = 0; attempt < MAX_MIGRATION_MERGE_ATTEMPTS; attempt += 1) {
+        const globalConfigs = globalState.get<ConnectionConfig[]>(CONNECTIONS_KEY) ?? [];
+        const missing = findMissingLegacyConfigs(globalConfigs, legacyConfigs);
+        if (missing.length === 0) {
+          break;
+        }
+        await globalState.update(CONNECTIONS_KEY, [...globalConfigs, ...missing]);
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
       }
-      await globalState.update(CONNECTIONS_KEY, [...globalConfigs, ...missing]);
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      const finalGlobalConfigs = globalState.get<ConnectionConfig[]>(CONNECTIONS_KEY) ?? [];
+      if (findMissingLegacyConfigs(finalGlobalConfigs, legacyConfigs).length > 0) {
+        throw new Error('Unable to migrate all saved ZooKeeper connections');
+      }
+      await workspaceState.update(WORKSPACE_MIGRATION_KEY, true);
+    };
+    if (legacyConfigs.length > 0) {
+      await runMigration(migrate);
+    } else {
+      await workspaceState.update(WORKSPACE_MIGRATION_KEY, true);
     }
-    const finalGlobalConfigs = globalState.get<ConnectionConfig[]>(CONNECTIONS_KEY) ?? [];
-    if (findMissingLegacyConfigs(finalGlobalConfigs, legacyConfigs).length > 0) {
-      throw new Error('Unable to migrate all saved ZooKeeper connections');
-    }
-    await workspaceState.update(WORKSPACE_MIGRATION_KEY, true);
   }
   return new ConnectionStore(globalState, secrets);
 }

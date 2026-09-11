@@ -149,6 +149,24 @@ describe('initializeConnectionStore', () => {
     assert.deepStrictEqual(await store.list(), [legacy]);
   });
 
+  it('runs the migration wrapper only when legacy connections exist', async () => {
+    const global = new FakeKeyValue();
+    const workspace = new FakeKeyValue();
+    const secrets = new FakeSecrets();
+    await workspace.update('zkViewer.connections', [{ id: 'legacy', name: 'Legacy', hosts: 'old:2181' }]);
+    let runs = 0;
+
+    await initializeConnectionStore(global, workspace, secrets, async (task) => {
+      runs += 1;
+      await task();
+    });
+    await initializeConnectionStore(global, workspace, secrets, async () => {
+      runs += 1;
+    });
+
+    assert.strictEqual(runs, 1);
+  });
+
   it('merges connections from multiple legacy workspaces without overwriting global entries', async () => {
     const global = new FakeKeyValue();
     const secrets = new FakeSecrets();
