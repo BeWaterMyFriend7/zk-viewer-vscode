@@ -41,6 +41,8 @@ export interface ConnectionMessages {
   testConnectionButton: string;
   testSuccess: string;
   testFailed(detail: string): string;
+  migrationInProgress: string;
+  migrationCompleted: string;
 }
 
 export interface SearchMessages {
@@ -108,6 +110,7 @@ export interface DetailMessages {
   minifyJson: string;
   dataPlaceholder: string;
   edit: string;
+  refresh: string;
   save: string;
   readOnlyLabel: string;
   statLabels: Record<string, string>;
@@ -221,6 +224,8 @@ const english: ImportExportMessages = {
     testConnectionButton: 'Test Connection',
     testSuccess: 'Connection OK',
     testFailed: (detail) => `Connection failed: ${detail}`,
+    migrationInProgress: 'Migrating connection settings from the previous version...',
+    migrationCompleted: 'Connection settings migration completed.',
   },
   search: {
     modeLabels: {
@@ -309,6 +314,7 @@ const english: ImportExportMessages = {
     minifyJson: 'Minify JSON',
     dataPlaceholder: 'Node data',
     edit: 'Edit',
+    refresh: 'Refresh',
     save: 'Save',
     readOnlyLabel: 'Read-only',
     statLabels: {
@@ -462,6 +468,8 @@ const chinese: ImportExportMessages = {
     testConnectionButton: '测试连接',
     testSuccess: '连接成功',
     testFailed: (detail) => `连接失败：${detail}`,
+    migrationInProgress: '正在迁移旧版连接配置…',
+    migrationCompleted: '连接配置迁移完成。',
   },
   search: {
     modeLabels: {
@@ -550,6 +558,7 @@ const chinese: ImportExportMessages = {
     minifyJson: '压缩 JSON',
     dataPlaceholder: '节点数据',
     edit: '编辑',
+    refresh: '刷新',
     save: '保存',
     readOnlyLabel: '只读',
     statLabels: {

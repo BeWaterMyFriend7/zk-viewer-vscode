@@ -41,7 +41,11 @@ jobs:
       - name: Verify VSIX contents
         run: |
           # VSIX 是 ZIP 格式，Ubuntu 的 GNU tar 无法读取，使用 unzip 校验。
-          unzip -l dist/zk-viewer-vscode.vsix | grep -E 'extension/package.json|extension/out/src/extension.js|extension/media/detail.js'
+          unzip -l dist/zk-viewer-vscode.vsix | grep -E 'extension/package.json|extension/out/extension.js|extension/media/detail.js'
+          if unzip -l dist/zk-viewer-vscode.vsix | grep -q 'extension/node_modules/'; then
+            echo "::error::VSIX 不应包含 node_modules"
+            exit 1
+          fi
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v5
         with:

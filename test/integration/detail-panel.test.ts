@@ -31,6 +31,7 @@ suite('Detail panel (mock)', () => {
     assert.strictEqual(loaded?.stat.numChildren, 0);
 
     const html = api.detailPanelHtml() ?? '';
+    assert.ok(html.includes('id="refresh"'), 'the panel should provide a Refresh button');
     assert.ok(html.includes('id="edit"'), 'the panel should provide an Edit button');
     assert.ok(html.includes('id="display-json"'), 'the panel should provide a JSON display button');
     assert.ok(html.includes('id="display-text"'), 'the panel should provide a TXT display button');
@@ -136,7 +137,7 @@ suite('Detail panel (mock)', () => {
         descriptor: { path: '/localized' },
       });
       const html = api.detailPanelHtml() ?? '';
-      for (const expected of ['详细信息', '显示', '换行：开', '压缩 JSON', '编辑', '保存', '只读']) {
+      for (const expected of ['详细信息', '显示', '换行：开', '压缩 JSON', '编辑', '保存', '刷新', '只读']) {
         assert.ok(html.includes(expected), `detail panel should include Chinese text: ${expected}`);
       }
       for (const english of ['Details', 'Display', 'Wrap: On', 'Minify JSON', '>Edit<', '>Save<']) {

@@ -74,6 +74,36 @@ describe('DetailPanelController', () => {
     assert.strictEqual(view.messages.length, 1);
   });
 
+  it('refreshes the current node data and version without duplicating its watch', async () => {
+    await controller.load('/app/config');
+    await controller.handleMessage({ type: 'refresh' });
+    assert.strictEqual(watchCount, 1);
+    await client.setData('/app/config', Buffer.from('{"role":"external"}'), 0);
+    await controller.handleMessage({ type: 'refresh', path: '/ignored' });
+    assert.strictEqual(controller.getLastLoad()?.stat.version, 1);
+    assert.ok(
+      view.messages.some((message) => (message as { dataText?: string }).dataText === '{"role":"external"}'),
+    );
+    await controller.handleMessage({ type: 'save', path: '/app/config', text: 'updated' });
+    assert.strictEqual((await client.getData('/app/config')).data.toString(), 'updated');
+  });
+
+  it('keeps the loaded snapshot after a refresh error and allows retry', async () => {
+    await controller.load('/app/config');
+    deps.getNodeData = async () => {
+      throw new Error('Connection lost');
+    };
+    await controller.handleMessage({ type: 'refresh' });
+    assert.strictEqual(controller.getLastLoad()?.stat.version, 0);
+    assert.deepStrictEqual(view.messages.slice(-2), [
+      { type: 'error', message: 'Connection lost', code: undefined },
+      { type: 'refreshFinished' },
+    ]);
+    deps.getNodeData = (path) => client.getData(path);
+    await controller.handleMessage({ type: 'refresh' });
+    assert.strictEqual((view.messages[view.messages.length - 2] as { type: string }).type, 'loadData');
+  });
+
   it('saves with the loaded version and reloads the node', async () => {
     const loaded = await controller.load('/app/config');
     await controller.handleMessage({

@@ -17,6 +17,8 @@ describe('import/export messages', () => {
     assert.strictEqual(messages.downloadTemplateButton, '下载标准模板');
     assert.strictEqual(messages.languageButton, '设置语言...');
     assert.strictEqual(messages.connection.selectConnection, '选择连接');
+    assert.strictEqual(messages.connection.migrationInProgress, '正在迁移旧版连接配置…');
+    assert.strictEqual(messages.connection.migrationCompleted, '连接配置迁移完成。');
     assert.strictEqual(messages.search.modeLabels.contains, '路径包含（例如 168）');
     assert.strictEqual(messages.node.typeLabels.EPHEMERAL, '临时节点');
     assert.strictEqual(messages.sort.labels.ctime, '创建时间（从早到晚）');
@@ -45,6 +47,14 @@ describe('import/export messages', () => {
     assert.strictEqual(getImportExportMessages('en').downloadTemplateButton, 'Download Standard Template');
     assert.strictEqual(getImportExportMessages('en').languageButton, 'Set Language...');
     assert.strictEqual(getImportExportMessages('en').connection.selectConnection, 'Select a connection');
+    assert.strictEqual(
+      getImportExportMessages('en').connection.migrationInProgress,
+      'Migrating connection settings from the previous version...',
+    );
+    assert.strictEqual(
+      getImportExportMessages('en').connection.migrationCompleted,
+      'Connection settings migration completed.',
+    );
     assert.strictEqual(getImportExportMessages('en').detail.save, 'Save');
     assert.strictEqual(getImportExportMessages('en').detail.detailsSummary, 'Details');
     assert.strictEqual(getImportExportMessages('en').detail.statLabels.mzxid, 'Modified transaction ID');

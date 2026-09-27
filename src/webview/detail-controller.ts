@@ -96,7 +96,7 @@ export class DetailPanelController {
   }
 
   private async armWatch(path: string): Promise<void> {
-    if (this.disposed || !this.deps.watchNode) {
+    if (this.disposed || this.watchArmed || !this.deps.watchNode) {
       return;
     }
     this.watchArmed = true;
@@ -148,6 +148,29 @@ export class DetailPanelController {
     version?: number;
     displayMode?: 'json' | 'text';
   }): Promise<void> {
+    if (message.type === 'refresh') {
+      if (this.disposed || !this.loadedPath) {
+        return;
+      }
+      const path = this.loadedPath;
+      try {
+        await this.load(path);
+      } catch (err) {
+        const code = (err as Partial<ZkError>).code;
+        if (code === ZkErrorCode.NO_NODE) {
+          this.handleNodeDeleted(path);
+        } else {
+          this.view.postMessage({
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err),
+            code,
+          } as ErrorMessage);
+        }
+      } finally {
+        this.view.postMessage({ type: 'refreshFinished' });
+      }
+      return;
+    }
     if (message.type !== 'save') {
       return;
     }

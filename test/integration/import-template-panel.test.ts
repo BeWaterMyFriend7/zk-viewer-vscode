@@ -2,17 +2,23 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { createImportTemplateDocument } from '../../src/commands/import-template';
 import { serializeNodeDataExport } from '../../src/commands/export-node-data';
-import { ImportTemplatePanel } from '../../src/webview/import-template-panel';
+import type * as ext from '../../src/extension';
 import { activateExtension } from './extension-helper';
 
 suite('Import format panel', () => {
+  let api: ReturnType<typeof ext.getTestApi>;
+
   suiteSetup(async () => {
     await activateExtension();
+    const testApi = (globalThis as { __zkViewerTestApi?: ReturnType<typeof ext.getTestApi> })
+      .__zkViewerTestApi;
+    assert.ok(testApi);
+    api = testApi!;
   });
 
   test('shows the canonical template as read-only content', async () => {
     await vscode.commands.executeCommand('zkViewer.openImportFormat');
-    const html = ImportTemplatePanel.getCurrentHtml();
+    const html = api.importTemplateHtml();
     assert.ok(html, 'import format panel should be open');
     assert.match(html, /<pre[^>]*id="import-template"/);
     assert.doesNotMatch(html, /<textarea/i);
@@ -48,15 +54,15 @@ suite('Import format panel', () => {
         silent: true,
       });
       await vscode.commands.executeCommand('zkViewer.openImportFormat');
-      assert.ok(ImportTemplatePanel.getCurrentHtml()?.includes('ZooKeeper 导入格式'));
-      assert.ok(ImportTemplatePanel.getCurrentHtml()?.includes('<html lang="zh-CN">'));
+      assert.ok(api.importTemplateHtml()?.includes('ZooKeeper 导入格式'));
+      assert.ok(api.importTemplateHtml()?.includes('<html lang="zh-CN">'));
 
       await vscode.commands.executeCommand('zkViewer.setLanguage', {
         preference: 'en',
         silent: true,
       });
-      assert.ok(ImportTemplatePanel.getCurrentHtml()?.includes('ZooKeeper Import Format'));
-      assert.ok(ImportTemplatePanel.getCurrentHtml()?.includes('<html lang="en">'));
+      assert.ok(api.importTemplateHtml()?.includes('ZooKeeper Import Format'));
+      assert.ok(api.importTemplateHtml()?.includes('<html lang="en">'));
     } finally {
       await vscode.workspace
         .getConfiguration('zkViewer')

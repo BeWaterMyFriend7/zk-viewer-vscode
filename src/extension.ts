@@ -7,6 +7,8 @@ import {
 import {
   buildZkConnectionString,
   ConnectionStore,
+  type ConnectionMigrationRunner,
+  initializeConnectionStore,
   type ConnectionConfig,
   type KeyValueStorage,
 } from './connections/connection-store';
@@ -929,10 +931,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   log('zk-viewer-vscode activating');
   extensionContext = context;
 
-  store = new ConnectionStore(
+  let migrationStarted = false;
+  const connectionMessages = getUiMessages().connection;
+  const runMigration: ConnectionMigrationRunner = async (task) => {
+    migrationStarted = true;
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: connectionMessages.migrationInProgress,
+      },
+      () => task(),
+    );
+  };
+  store = await initializeConnectionStore(
+    context.globalState as unknown as KeyValueStorage,
     context.workspaceState as unknown as KeyValueStorage,
     new SecretStorageWrapper(context.secrets as unknown as SecretStorageLike),
+    runMigration,
   );
+  if (migrationStarted) {
+    void vscode.window.showInformationMessage(connectionMessages.migrationCompleted);
+  }
 
   const config = vscode.workspace.getConfiguration('zkViewer');
   const managerOptions: ConnectionManagerOptions = {
@@ -1021,6 +1040,7 @@ export function getTestApi(): {
   detailPanelHtml: () => string | undefined;
   connectionFormHtml: () => string | undefined;
   nodeCreateHtml: () => string | undefined;
+  importTemplateHtml: () => string | undefined;
   statusBarText: () => string;
   lastRevealedPath: () => string | undefined;
   lastCommandError: () => string | undefined;
@@ -1037,6 +1057,7 @@ export function getTestApi(): {
     detailPanelHtml: () => NodeDetailPanel.getCurrentHtml(),
     connectionFormHtml: () => ConnectionFormPanel.getCurrentHtml(),
     nodeCreateHtml: () => NodeCreatePanel.getCurrentHtml(),
+    importTemplateHtml: () => ImportTemplatePanel.getCurrentHtml(),
     statusBarText: () => statusBar.text,
     lastRevealedPath: () => lastRevealedPath,
     lastCommandError: () => lastCommandError,
