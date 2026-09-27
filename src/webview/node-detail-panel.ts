@@ -17,6 +17,7 @@ function webviewMessages(messages: DetailMessages): Record<string, unknown> {
     wrapOff: messages.wrapOff,
     minifyJson: messages.minifyJson,
     edit: messages.edit,
+    refresh: messages.refresh,
     save: messages.save,
     informationHeading: messages.informationHeading,
     detailsSummary: messages.detailsSummary,
@@ -215,6 +216,7 @@ export class NodeDetailPanel {
     <section class="data-card">
       <div class="data-toolbar">
         <div class="action-buttons">
+          <button id="refresh" class="secondary-button" type="button" disabled>${escapeHtml(messages.refresh)}</button>
           <button id="edit" class="secondary-button" type="button">${escapeHtml(messages.edit)}</button>
           <button id="save" class="primary-button" type="button">${escapeHtml(messages.save)}</button>
         </div>

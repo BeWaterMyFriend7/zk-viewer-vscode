@@ -110,6 +110,7 @@ export interface DetailMessages {
   minifyJson: string;
   dataPlaceholder: string;
   edit: string;
+  refresh: string;
   save: string;
   readOnlyLabel: string;
   statLabels: Record<string, string>;
@@ -313,6 +314,7 @@ const english: ImportExportMessages = {
     minifyJson: 'Minify JSON',
     dataPlaceholder: 'Node data',
     edit: 'Edit',
+    refresh: 'Refresh',
     save: 'Save',
     readOnlyLabel: 'Read-only',
     statLabels: {
@@ -556,6 +558,7 @@ const chinese: ImportExportMessages = {
     minifyJson: '压缩 JSON',
     dataPlaceholder: '节点数据',
     edit: '编辑',
+    refresh: '刷新',
     save: '保存',
     readOnlyLabel: '只读',
     statLabels: {

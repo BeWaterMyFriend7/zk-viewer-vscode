@@ -3,6 +3,7 @@
   const vscode = acquireVsCodeApi();
   const editButton = document.getElementById('edit');
   const saveButton = document.getElementById('save');
+  const refreshButton = document.getElementById('refresh');
   const statBox = document.getElementById('stat');
   const statSummary = document.querySelector('.stat-summary');
 
@@ -13,6 +14,7 @@
   let dataEditable = false;
   let messages = window['zkViewerDetailMessages'];
   let editor;
+  let refreshing = false;
 
   function formatMessage(template, replacements) {
     return Object.entries(replacements || {}).reduce(
@@ -36,6 +38,7 @@
     statSummary.textContent = messages.detailsSummary;
     editButton.textContent = messages.edit;
     saveButton.textContent = messages.save;
+    refreshButton.textContent = messages.refresh;
     editor.setMessages(messages);
   }
 
@@ -93,7 +96,8 @@
   function setEditing(enabled) {
     editor.setEditable(enabled);
     saveButton.disabled = !enabled;
-    editButton.disabled = enabled || !dataEditable;
+    editButton.disabled = enabled || !dataEditable || refreshing;
+    refreshButton.disabled = enabled || refreshing || !currentPath;
     normalStatus();
   }
 
@@ -111,6 +115,10 @@
       editor.setValue(message.dataText, message.kind);
       setEditing(false);
       renderStat(message.stat);
+    } else if (message.type === 'refreshFinished') {
+      refreshing = false;
+      refreshButton.disabled = !currentPath;
+      editButton.disabled = !dataEditable;
     } else if (message.type === 'saved') {
       setEditing(false);
       editor.showStatus(formatMessage(messages.savedAtVersion, { version: currentVersion }), false);
@@ -121,6 +129,14 @@
 
   editButton.addEventListener('click', () => {
     if (dataEditable) { setEditing(true); }
+  });
+
+  refreshButton.addEventListener('click', () => {
+    if (refreshButton.disabled) { return; }
+    refreshing = true;
+    refreshButton.disabled = true;
+    editButton.disabled = true;
+    vscode.postMessage({ type: 'refresh' });
   });
 
   saveButton.addEventListener('click', () => {
